@@ -1,4 +1,4 @@
-# PIC16F72 Quick-Reference Cheat Sheet
+# PIC16F72 INSTRUCTION SET ANALYSIS
 
 ## 1. What are we building?
 We’re making a software simulator for the PIC16F72 microcontroller. The chip understands 35 instructions—each one is 14 bits wide, and they’re stored in a 2K × 14-bit memory.
