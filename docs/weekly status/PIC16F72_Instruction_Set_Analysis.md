@@ -2,13 +2,13 @@
 
 Instruction set analysis breaks down how a microcontroller like the PIC16F72 understands and runs its instructions. If you ever build a simulator for one of these chips, think of the instruction set as the microcontroller’s grammar—it shapes everything the chip does.
 
-## 1. Ground Rules
+## 1. Core Architecture Specifications
 
 - Every instruction is exactly **14 bits** long.
 - The chip can store up to **2,048** of these instructions.
 - The chip understands **35 unique commands**.
 
-## 2. Instruction Bitfields
+## 2.Instruction Field Breakdown
 
 Each time the chip reads a 14-bit instruction, it splits that number into smaller parts to figure out exactly what it is supposed to do.
 
@@ -16,7 +16,7 @@ Each time the chip reads a 14-bit instruction, it splits that number into smalle
 - **b bit — Bit Selection:** Picks out a single bit inside a byte, from 0 to 7.
 - **k field — Number/Address:** Contains a plain number or an address to jump to.
 
-## 3. Four Instruction Families
+## 3. Instruction Categorization & Types
 
 All 35 instructions fall into four basic families.
 
@@ -49,7 +49,7 @@ These handle jumps, calls, and returns—anything that changes how the program r
 GOTO main  
 CALL delay
 
-## 4. Instruction Execution and Timing
+## 4.Execution Flow & Timing Characteristics
 
 - Most instructions take **one machine cycle**, which is **four clock ticks**.
 - Each one-cycle instruction moves **Timer0 forward by 1**.
@@ -57,7 +57,7 @@ CALL delay
 - Jump and call instructions take two cycles because the chip has to **clear out its pipeline and reload with the new address**.
 - Therefore, a jump or call moves **Timer0 forward by 2**.
 
-## 5. Why Instruction Set Analysis Matters for a Simulator
+## 5.The Role of Instruction Analysis in Emulation
 
 To build a simulator, every instruction must be handled correctly:
 
