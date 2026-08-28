@@ -1,45 +1,40 @@
 # Programming Language Selection Document
 
 ## 1. Selected Language
-* **Language:** Java (JDK 17 or higher).
-* **Design Paradigm:** Object-Oriented Programming (OOP)
+* **Language:** Java (JDK 17 or higher)
+* **Approach:** Object-Oriented Programming (OOP)
 
 
-
-## 2. Reasons for Selection
-* **Course Standard & Alignment:** Java is the officially preferred and recommended programming language for the educational microcontroller simulator project.
-* **Modular Architecture Support:** The object-oriented model allows hardware components (such as the CPU, RAM, Call Stack, Timer0, and GPIO ports) to be encapsulated as distinct, reusable software classes.
-* **Standard Data Structures:** Java provides robust, built-in collections (`Queue`, `LinkedList`, `ArrayList`, and `HashMap`) that simplify the implementation of Process Control Blocks (PCBs), the OS Ready Queue, and instruction lookup tables.
-* **Cross-Platform Portability:** Java’s "Write Once, Run Anywhere" (WORA) model ensures that the simulator runs identically on Windows, macOS, and Linux without platform-dependent compilation issues.
-
+## 2. Why We Chose Java
+* **Course Requirement:** Java is the officially suggested and preferred language for this simulator project.
+* **Easy to Model Hardware:** Using classes and objects makes it simple to break down parts of the chip (like CPU, Memory, Stack, and Peripherals) into separate files.
+* **Built-in Data Structures:** Java has ready-to-use collections like `Queue`, `LinkedList`, and `ArrayList`, which makes building the process scheduler and ready queue much easier.
+* **Runs Anywhere:** It works smoothly across Windows, Mac, and Linux, so our entire team can run the same code without setup issues.
 
 
-## 3. Advantages for the PIC16F72 Simulator Project
-* **Clear Hardware Emulation:** Registers like `STATUS`, `WREG`, and `INTCON` can be cleanly modeled using primitive integer types and bitwise masks (`&`, `|`, `^`, `<<`, `>>`).
-* **OS & Scheduler Integration:** Designing multi-process scheduling algorithms (FCFS, Round Robin, Priority) alongside context switching is clean and maintainable using Java class hierarchies and queues.
-* **Maintainability & Collaboration:** Strong typing, compile-time error checks, and standard package management make it easier for all 4 team members to develop and merge separate modules smoothly.
-* **Testing & Extensibility:** Unit testing frameworks (such as JUnit) can be added directly in the `tests/` folder for verifying opcode behavior and register state transitions.
+## 3. Benefits for Our PIC16F72 Simulator
+* **Clear Logic:** We can represent registers and flags using standard integers and bitwise operations (`&`, `|`, `^`, `<<`, `>>`).
+* **Clean OS Implementation:** Writing scheduling algorithms (FCFS, Round Robin, Priority) and managing Process Control Blocks (PCBs) is straightforward using standard Java classes.
+* **Team Collaboration:** Java's package system and strict type checking make it easier for the four of us to work on separate modules and merge them without breaking things.
+* **Easy Testing:** We can write simple test cases in the `tests/` folder to check if our instruction decoding works properly.
 
 
-
-## 4. Limitations and Mitigation Strategies
-* **Unsigned Arithmetic Handling:** 
-  * *Limitation:* Java does not have native unsigned 8-bit byte types (`byte` is signed, $-128$ to $+127$).
-  * *Mitigation:* Use standard `int` variables and mask with `& 0xFF` (for 8-bit values) and `& 0x1FFF` (for 13-bit PC addresses) to emulate exact unsigned register behavior.
-* **Runtime Overhead:** 
-  * *Limitation:* Java runs on the JVM, which introduces slightly higher memory usage compared to low-level languages like C/C++.
-  * *Mitigation:* Because the simulator models an educational 8-bit microcontroller subset, the performance overhead is negligible and well within acceptable bounds.
-
+## 4. Challenges and How We Will Handle Them
+* **Signed Bytes in Java:**
+  * *Problem:* Java bytes are signed (-128 to +127), but the PIC16F72 uses unsigned 8-bit values (0 to 255).
+  * *Solution:* We will store register values in standard `int` variables and use `& 0xFF` to keep them within the 8-bit unsigned range.
+* **Performance:**
+  * *Problem:* Java is slightly heavier on memory compared to C/C++.
+  * *Solution:* Since we are building an educational simulator for a simple 8-bit processor, performance differences will not be an issue.
 
 
-## 5. Alternative Language Evaluation
-* No alternative language was required since the team chose the default preferred language (**Java**).
-* As Java was selected, no special faculty justification or exemption was needed.
+## 5. Other Languages Considered
+* We stuck with Java because it is the default preferred choice given in the project guidelines.
+* Since we are using Java, we do not need extra faculty approval or justifications for choosing an alternative language.
 
 
-
-## 6. Document Metadata
-* **Prepared By:** Chinmay (Team Member)
-* **Module:** Technology Selection & Environment Setup
-* **Status:** Accepted & Finalized for Week 1
-* **Branch:** `week-01`
+## 6. Document Info
+* **Prepared By:** Chinmay
+* **Topic:** Language Selection & Setup
+* **Status:** Finalized for Week 1
+* **Branch:** week-01
