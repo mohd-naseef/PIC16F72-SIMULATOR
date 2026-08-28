@@ -11,6 +11,4 @@ We chose Java because it is the officially recommended language for this simulat
 3. **Cross-Platform Compatibility:** Because Java runs on the JVM, our entire team can write, build, and test the simulator seamlessly across Windows, macOS, and Linux without platform-specific build issues.
 4. **Handling Unsigned 8-bit Math:** Although Java uses signed bytes, we can easily handle 8-bit register values by storing them in standard `int` types and using bitwise masks (`& 0xFF`).
 
-### Alternative Language Evaluation
-* Since our team finalized **Java** (the preferred course standard), we did not select an alternative language (like C or Python).
 
