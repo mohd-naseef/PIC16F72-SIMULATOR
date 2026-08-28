@@ -1,16 +1,138 @@
-# PIC16F72-SIMULATOR
-## Selected Programming Language
+# 🖥️ Educational PIC16F72 Microcontroller Simulator with Process Scheduling
 
-* **Language:** Java (JDK 17 or higher)
-* **Design Paradigm:** Object-Oriented Programming (OOP)
+An educational software simulator that helps students understand the internal working of the **PIC16F72 8-bit microcontroller** while demonstrating **CPU scheduling algorithms** in a simple and interactive way.
 
-### Why We Selected Java
-We chose Java because it is the officially recommended language for this simulator and fits our requirements well:
-1. **Clear Modular Design:** With Java’s OOP support, we can create individual classes for each microcontroller component (like `CPU.java`, `Memory.java`, `Stack.java`, and `Peripherals.java`). This keeps our codebase organized and lets each team member work on separate modules without merge conflicts.
-2. **Built-in Collections for OS Modeling:** Java provides native data structures like `Queue`, `LinkedList`, and `ArrayList`. These make it straightforward to implement the OS Ready Queue, Process Control Blocks (PCBs), and scheduling algorithms (Round Robin, FCFS, Priority).
-3. **Cross-Platform Compatibility:** Because Java runs on the JVM, our entire team can write, build, and test the simulator seamlessly across Windows, macOS, and Linux without platform-specific build issues.
-4. **Handling Unsigned 8-bit Math:** Although Java uses signed bytes, we can easily handle 8-bit register values by storing them in standard `int` types and using bitwise masks (`& 0xFF`).
+---
 
-### Alternative Language Evaluation
-* Since our team finalized **Java** (the preferred course standard), we did not select an alternative language (like C or Python).
+# 📌 Project Overview
 
+The PIC16F72 executes instructions, manages memory, controls peripherals, and responds to interrupts. These internal operations are often difficult to visualize in hardware. This simulator recreates them in software and combines concepts from:
+
+- Microprocessor Architecture
+- Data Structures
+- Operating Systems
+
+---
+
+# 🎯 Problem Objective
+
+The objective of this project is to develop a software-based simulator that enables users to:
+
+- Execute PIC16F72 instructions
+- Understand the Program Counter and CPU organization
+- Perform register and memory operations
+- Visualize stack operations and STATUS flags
+- Simulate GPIO, timers, and interrupts
+- Create and manage processes
+- Demonstrate FCFS, Round Robin, and Priority Scheduling
+- Understand context switching
+
+---
+
+# ✨ Features
+
+- 8-bit CPU Simulation
+- Working Register (W)
+- Program Counter (PC)
+- STATUS Register
+- Program & Data Memory
+- Hardware Stack
+- GPIO Ports
+- Timer0 & Interrupt Controller
+- Process Control Block (PCB)
+- Ready Queue & Context Switching
+- FCFS, Round Robin & Priority Scheduling
+
+---
+
+# 🏗️ System Architecture
+
+> Insert the architecture image below in your repository as `docs/images/system_architecture.jpg`.
+
+![PIC16F72 System Architecture](docs/images/system_architecture.jpg)
+
+---
+
+# 👥 Team Responsibilities
+
+> Insert the responsibility table image below as `docs/images/team_responsibility.jpg`.
+
+![Team Responsibilities](docs/images/team_responsibility.jpg)
+
+### Team Members
+
+| Member | Primary Responsibility | Supporting Responsibility |
+|---------|------------------------|---------------------------|
+| **Naseef** | CPU & Instruction Execution | Integration & GitHub |
+| **Moksha** | Memory & Stack | CPU Support |
+| **Anas** | Data Structures & Process Management | Testing |
+| **Chinmay** | OS Scheduling & Context Switching | UI & Integration |
+
+---
+
+# 💻 Programming Language
+
+**Java**
+
+Java has been selected because it provides:
+
+- Object-Oriented Programming
+- Modular class-based design
+- Easy implementation of queues and scheduling algorithms
+- Efficient memory management
+- Simple GUI development using Java Swing/JavaFX
+
+---
+
+# 📂 Project Structure
+
+```text
+Educational-PIC16F72-Simulator/
+
+docs/
+ ├── images/
+ ├── Meeting_Minutes/
+ ├── Weekly_Status/
+ └── Design_Documents/
+
+src/
+ ├── cpu/
+ ├── memory/
+ ├── scheduler/
+ ├── peripherals/
+ └── Main.java
+
+tests/
+programs/
+README.md
+```
+
+---
+
+# 🚀 Development Plan
+
+### Week 1
+- Repository setup
+- Documentation
+- Architecture study
+- Team responsibility allocation
+
+### Week 2
+- CPU implementation
+- Memory module
+- Instruction execution
+- Timer & interrupt simulation
+
+### Future Phases
+- PCB & Ready Queue
+- Context Switching
+- FCFS, Round Robin & Priority Scheduling
+- Integration & Testing
+
+---
+
+# 🎓 Expected Outcome
+
+The completed simulator will serve as an educational learning tool where students can observe how the **PIC16F72 microcontroller** executes instructions while understanding **process scheduling and context switching** through practical simulation.
+
+**Microprocessor Architecture + Data Structures + Operating Systems**
