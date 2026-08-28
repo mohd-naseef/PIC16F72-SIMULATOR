@@ -13,6 +13,4 @@ We chose Java because it is the officially recommended language for this simulat
 
 ### Alternative Language Evaluation
 * Since our team finalized **Java** (the preferred course standard), we did not select an alternative language (like C or Python).
-* Consequently, no additional faculty exemption or alternative language justification was required.
 
-For the comprehensive technical evaluation and limitation mitigations, refer to [`docs/language_selection.md`](docs/language_selection.md).
