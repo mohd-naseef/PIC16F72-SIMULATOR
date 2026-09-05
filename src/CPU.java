@@ -44,6 +44,14 @@ public class CPU {
 
         return currentInstruction;
     }
+    // DECODE
+public String decode() {
+    if (currentInstruction == null) {
+        return null;
+    }
+
+    return currentInstruction.getOpcode();
+}
 
     public Instruction getCurrentInstruction() {
         return currentInstruction;
