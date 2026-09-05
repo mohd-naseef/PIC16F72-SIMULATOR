@@ -2,7 +2,7 @@ public class GPIO {
     public int portA = 0;              
     public boolean pinTrigger = false; // Simulates pressing an external button
 
-    // When someone presses an external button, flag an interrupt
+    // Turn on the interrupt when the button is pressed
     public void pressButton() {
         System.out.println("[GPIO] External button pressed! Setting interrupt...");
         pinTrigger = true;
