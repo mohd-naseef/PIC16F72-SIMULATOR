@@ -1,1 +1,36 @@
+public class CPU {
 
+    private int W = 0;
+    private int PC = 0;
+    private int STATUS = 0;
+
+    public int getW() {
+        return W;
+    }
+
+    public void setW(int value) {
+        W = value & 0xFF;
+    }
+
+    public int getPC() {
+        return PC;
+    }
+
+    public void setPC(int value) {
+        PC = value;
+    }
+
+    public int getSTATUS() {
+        return STATUS;
+    }
+
+    public void setSTATUS(int value) {
+        STATUS = value & 0xFF;
+    }
+
+    public void reset() {
+        W = 0;
+        PC = 0;
+        STATUS = 0;
+    }
+}
