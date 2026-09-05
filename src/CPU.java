@@ -52,6 +52,34 @@ public String decode() {
 
     return currentInstruction.getOpcode();
 }
+    // EXECUTE
+public void execute() {
+
+    if (currentInstruction == null) {
+        return;
+    }
+
+    String opcode = currentInstruction.getOpcode();
+    int operand = currentInstruction.getOperand();
+
+    switch (opcode) {
+
+        case "LOAD":
+            W = operand;
+            break;
+
+        case "ADD":
+            W = (W + operand) & 0xFF;
+            break;
+
+        case "SUB":
+            W = (W - operand) & 0xFF;
+            break;
+
+        default:
+            System.out.println("Unknown instruction: " + opcode);
+    }
+}
 
     public Instruction getCurrentInstruction() {
         return currentInstruction;
