@@ -4,6 +4,13 @@ public class CPU {
     private int PC = 0;
     private int STATUS = 0;
 
+    private ProgramMemory programMemory;
+    private Instruction currentInstruction;
+
+    public CPU(ProgramMemory programMemory) {
+        this.programMemory = programMemory;
+    }
+
     public int getW() {
         return W;
     }
@@ -28,9 +35,24 @@ public class CPU {
         STATUS = value & 0xFF;
     }
 
+    // FETCH
+    public Instruction fetch() {
+
+        currentInstruction = programMemory.getInstruction(PC);
+
+        PC++;
+
+        return currentInstruction;
+    }
+
+    public Instruction getCurrentInstruction() {
+        return currentInstruction;
+    }
+
     public void reset() {
         W = 0;
         PC = 0;
         STATUS = 0;
+        currentInstruction = null;
     }
 }
