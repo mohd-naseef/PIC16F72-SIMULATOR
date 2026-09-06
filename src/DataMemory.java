@@ -11,7 +11,7 @@ public class DataMemory {
         if (address >= 0 && address < MEMORY_SIZE) {
             return ram[address];
         }
-        return 0; // Or throw IndexOutOfBoundsException
+        return 0; 
     }
 
     public void write(int address, int value) {
