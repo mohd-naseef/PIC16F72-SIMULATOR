@@ -52,7 +52,7 @@ public String decode() {
 
     return currentInstruction.getOpcode();
 }
-    // EXECUTE
+  // EXECUTE
 public void execute() {
 
     if (currentInstruction == null) {
@@ -64,16 +64,8 @@ public void execute() {
 
     switch (opcode) {
 
-        case "LOAD":
-            W = operand;
-            break;
-
-        case "ADD":
-            W = (W + operand) & 0xFF;
-            break;
-
-        case "SUB":
-            W = (W - operand) & 0xFF;
+        case "MOVLW":
+            W = operand & 0xFF;
             break;
 
         default:
