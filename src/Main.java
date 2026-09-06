@@ -1,42 +1,66 @@
 public class Main {
+
     public static void main(String[] args) {
-        DataMemory mem = new DataMemory();
 
-        // 1. Initial State
-        System.out.println("Initial SP: 0x" + Integer.toHexString(mem.getSP()).toUpperCase());
+        // Create memories
+        ProgramMemory programMemory = new ProgramMemory();
+        DataMemory dataMemory = new DataMemory();
 
-        // 2. Direct Read/Write
-        mem.write(0x10, 0x42);
-        System.out.println("Read addr 0x10: 0x" + Integer.toHexString(mem.read(0x10)).toUpperCase());
+        // Load test program - all 8 selected instructions
+        programMemory.addInstruction(new Instruction("MOVLW", 10));
+        programMemory.addInstruction(new Instruction("MOVWF", 20));
+        programMemory.addInstruction(new Instruction("SUBLW", 15));
+        programMemory.addInstruction(new Instruction("ANDLW", 3));
+        programMemory.addInstruction(new Instruction("MOVLW", 5));
+        programMemory.addInstruction(new Instruction("ADDLW", 3));
+        programMemory.addInstruction(new Instruction("INCF", 20));
+        programMemory.addInstruction(new Instruction("GOTO", 9));
+        programMemory.addInstruction(new Instruction("MOVLW", 99)); // skipped by GOTO
+        programMemory.addInstruction(new Instruction("SLEEP", 0));
 
-        // 3. Stack Push operations
-        mem.push(0xAA);
-        mem.push(0xBB);
-        System.out.println("SP after 2 pushes: 0x" + Integer.toHexString(mem.getSP()).toUpperCase());
+        // Create CPU
+        CPU cpu = new CPU(programMemory, dataMemory);
 
-        // 4. Stack Pop operations (LIFO order)
-        int popped1 = mem.pop();
-        int popped2 = mem.pop();
-        System.out.println("First pop: 0x" + Integer.toHexString(popped1).toUpperCase());
-        System.out.println("Second pop: 0x" + Integer.toHexString(popped2).toUpperCase());
-        System.out.println("SP after 2 pops: 0x" + Integer.toHexString(mem.getSP()).toUpperCase());
+        System.out.println("===== PIC16F72 CPU SIMULATOR =====");
+        System.out.println();
 
-        // 5. Test Stack Underflow Exception
-        try {
-            mem.pop();
-        } catch (IllegalStateException e) {
-            System.out.println("Caught expected exception: " + e.getMessage());
+        // Fetch-Decode-Execute cycle
+        while (!cpu.isHalted()) {
+
+            // FETCH
+            Instruction instruction = cpu.fetch();
+
+            if (instruction == null) {
+                break;
+            }
+
+            // DECODE
+            String opcode = cpu.decode();
+
+            System.out.println(
+                "PC: " + (cpu.getPC() - 1)
+                + " | Instruction: " + opcode
+                + " | Operand: " + instruction.getOperand()
+            );
+
+            // EXECUTE
+            cpu.execute();
+
+            System.out.println(
+                "W = " + cpu.getW()
+                + " | STATUS = " + cpu.getSTATUS()
+            );
+
+            System.out.println();
         }
 
-    ProgramMemory memory = new ProgramMemory();
+        // Final CPU state
+        System.out.println("===== PROGRAM FINISHED =====");
+        System.out.println("W Register: " + cpu.getW());
+        System.out.println("Program Counter: " + cpu.getPC());
+        System.out.println("STATUS Register: " + cpu.getSTATUS());
+        System.out.println("Memory[20]: " + dataMemory.read(20));
+    }
+}
 
-    memory.addInstruction(new Instruction("MOVLW", 25));
-
-    CPU cpu = new CPU(memory);
-
-    cpu.fetch();
-    cpu.decode();
-    cpu.execute();
-
-    System.out.println("W = " + cpu.getW());
-} }
+           
