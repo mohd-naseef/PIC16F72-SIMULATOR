@@ -27,5 +27,16 @@ public class Main {
         } catch (IllegalStateException e) {
             System.out.println("Caught expected exception: " + e.getMessage());
         }
-    }
-}
+
+    ProgramMemory memory = new ProgramMemory();
+
+    memory.addInstruction(new Instruction("MOVLW", 25));
+
+    CPU cpu = new CPU(memory);
+
+    cpu.fetch();
+    cpu.decode();
+    cpu.execute();
+
+    System.out.println("W = " + cpu.getW());
+} }
