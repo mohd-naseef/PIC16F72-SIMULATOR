@@ -1,7 +1,7 @@
 public class CPU {
 
     private int W = 0;
-    private int PC = 0;
+    private ProgramCounter programCounter;
     private int STATUS = 0;
 
     private ProgramMemory programMemory;
@@ -18,6 +18,8 @@ public class CPU {
     public CPU(ProgramMemory programMemory, DataMemory dataMemory) {
         this.programMemory = programMemory;
         this.dataMemory = dataMemory;
+
+        programCounter = new ProgramCounter();
     }
 
     public int getW() {
@@ -29,11 +31,11 @@ public class CPU {
     }
 
     public int getPC() {
-        return PC;
+        return programCounter.getPC();
     }
 
     public void setPC(int value) {
-        PC = value;
+        programCounter.setPC(value);
     }
 
     public int getSTATUS() {
@@ -50,16 +52,20 @@ public class CPU {
 
     // ================= FETCH =================
     public Instruction fetch() {
-        if (PC < 0 || PC >= programMemory.size()) {
-            halted = true;
-            return null;
-        }
 
-        currentInstruction = programMemory.getInstruction(PC);
-        PC++;
+    int pc = programCounter.getPC();
 
-        return currentInstruction;
+    if (pc < 0 || pc >= programMemory.size()) {
+        halted = true;
+        return null;
     }
+
+    currentInstruction = programMemory.getInstruction(pc);
+
+    programCounter.increment();
+
+    return currentInstruction;
+}
 
     public Instruction getCurrentInstruction() {
         return currentInstruction;
@@ -141,7 +147,7 @@ public class CPU {
 
             // 5. Control Flow
             case "GOTO":
-                PC = operand;
+                programCounter.jump(operand);
                 break;
 
             // 6. Program Termination
@@ -182,8 +188,8 @@ public class CPU {
 
     public void reset() {
         W = 0;
-        PC = 0;
         STATUS = 0;
+        programCounter.reset();
         currentInstruction = null;
         halted = false;
     }
