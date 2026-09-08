@@ -78,8 +78,8 @@ reproduce real hardware behaviour.
 |--------|----------------|
 | Naseef | CPU & Instruction Execution |
 | Moksha | Memory & Stack |
-| Anas | Data Structures & Process Management |
-| Chinmay | Scheduling & Context Switching |
+| Anas | Scheduling & Context Switching |
+| Chinmay | Data Structures & Process Management |
 
 ## Development Plan
 
