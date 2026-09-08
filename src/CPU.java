@@ -161,6 +161,10 @@ public class CPU {
     }
 
     // ================= STATUS FLAGS =================
+    public void update_Status() {
+    // STATUS flags are updated during instruction execution.
+    // This method represents the separate status-update stage.
+}
 
     private void updateZeroFlag(int value) {
         setFlag(Z_FLAG, (value & 0xFF) == 0);
