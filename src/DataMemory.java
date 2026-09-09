@@ -1,4 +1,6 @@
+import java.util.Arrays;
 public class DataMemory {
+
 
     private static final int MEMORY_SIZE = 256;
     private static final int STACK_SIZE = 8;
