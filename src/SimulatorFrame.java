@@ -37,8 +37,9 @@ public class SimulatorFrame extends JFrame {
     private JTextArea console;
     private JLabel wValue, pcValue, statusValue, memoryValue, timerValue, portValue, stateValue;
     private JLabel currentTaskValue;
-    private JButton stepButton, runButton;
+    private JButton stepButton, runButton, loadButton;
     private Timer runTimer;
+    private boolean isLoaded = false;
 
     public SimulatorFrame() {
         super("PIC16F72 Simulator & OS Scheduler");
@@ -53,6 +54,14 @@ public class SimulatorFrame extends JFrame {
         gpio = new GPIO(); 
         timer0 = new Timer0(); 
         timer0.counter = 0;
+        cpu = new CPU(programMemory, dataMemory);
+        scheduler = new Scheduler(2);
+    }
+
+    private void loadTasks() {
+        stopRun();
+        programLines.clear();
+        initialiseModel();
 
         // Task 1: addresses 0-4
         add("MOVLW", 10); 
@@ -68,14 +77,15 @@ public class SimulatorFrame extends JFrame {
         add("INCF", 20); 
         add("SLEEP", 0);
 
-        cpu = new CPU(programMemory, dataMemory);
-
         // Initialise OS Scheduler with quantum of 2 instructions
-        scheduler = new Scheduler(2);
         scheduler.addTask(new Task(1, "Task 1", 0));
         scheduler.addTask(new Task(2, "Task 2", 5));
-    }
 
+        isLoaded = true;
+        programList.setListData(programLines.toArray(new String[0]));
+        console.setText("Program loaded. OS Scheduler ready with Task 1 and Task 2.\nPress STEP or RUN.\n\n");
+        refreshView();
+    }
     private void add(String opcode, int operand) {
         programMemory.addInstruction(new Instruction(opcode, operand));
         String operandText = opcode.equals("SLEEP") ? "" : String.format("0x%02X", operand);
@@ -135,7 +145,7 @@ public class SimulatorFrame extends JFrame {
         console.setForeground(new Color(27, 45, 62)); 
         console.setBackground(Color.WHITE); 
         console.setMargin(new java.awt.Insets(10, 12, 10, 12));
-        console.setText("Ready. OS Scheduler loaded with Task 1 (PC 0) and Task 2 (PC 5).\nPress STEP or RUN.\n\n"); 
+       console.setText("Ready. Click LOAD to load tasks into memory.\n\n");
         panel.add(new JScrollPane(console), BorderLayout.CENTER); 
         return panel;
     }
@@ -196,28 +206,32 @@ public class SimulatorFrame extends JFrame {
         parent.add(row); 
         return value;
     }
-
-    private JPanel createControls() {
+private JPanel createControls() {
         JPanel controls = new JPanel(); 
         controls.setBackground(BACKGROUND); 
         controls.setBorder(BorderFactory.createEmptyBorder(4, 8, 10, 8)); 
+        
+        loadButton = new JButton("LOAD");
         stepButton = new JButton("STEP"); 
         runButton = new JButton("RUN"); 
         JButton resetButton = new JButton("RESET"); 
         JButton clearConsole = new JButton("CLEAR CONSOLE");
 
+        loadButton.addActionListener(e -> loadTasks());
         stepButton.addActionListener(e -> executeStep()); 
         runButton.addActionListener(e -> toggleRun()); 
         resetButton.addActionListener(e -> resetSimulator()); 
         clearConsole.addActionListener(e -> console.setText("")); 
         
+        controls.add(loadButton);
         controls.add(stepButton); 
         controls.add(runButton); 
         controls.add(resetButton); 
         controls.add(clearConsole); 
+        
         runTimer = new Timer(520, e -> executeStep()); 
         return controls;
-    }
+    }   
 
     private JPanel titledPanel(String title, int width) {
         JPanel panel = new JPanel(new BorderLayout(6, 6)); 
@@ -274,15 +288,15 @@ public class SimulatorFrame extends JFrame {
         stepButton.setEnabled(true); 
     }
     
-    private void resetSimulator() { 
+   private void resetSimulator() { 
         stopRun(); 
+        isLoaded = false;
         programLines.clear(); 
         initialiseModel(); 
-        programList.setListData(programLines.toArray(new String[0])); 
-        console.setText("Simulator reset. Tasks loaded and ready.\n"); 
+        programList.setListData(new String[0]); 
+        console.setText("Simulator reset. Click LOAD to load program.\n"); 
         refreshView(); 
     }
-    
     private String flags() { 
         int status = cpu.getSTATUS(); 
         return String.format("%d  %d   %d", (status >> 2) & 1, (status >> 1) & 1, status & 1); 
@@ -301,7 +315,8 @@ public class SimulatorFrame extends JFrame {
         
         int pc = cpu.getPC(); 
         programList.setSelectedIndex(pc >= 0 && pc < programLines.size() ? pc : -1); 
-        stepButton.setEnabled(!runTimer.isRunning());
+        stepButton.setEnabled(isLoaded && !runTimer.isRunning());
+        runButton.setEnabled(isLoaded);
     }
     
     private void log(String message) { 
