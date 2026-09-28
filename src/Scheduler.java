@@ -2,93 +2,104 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 public class Scheduler {
-    private Queue<Task> readyQueue;
+
+    private Queue<Task> readyQueue = new LinkedList<>();
     private Task currentTask;
-    private int timeQuantum;     // How many instructions run before switching
-    private int instructionsRun;  // Counter for the current time slice
+    private int timeQuantum;
+    private int instructionsRun;
 
     public Scheduler(int timeQuantum) {
-        this.readyQueue = new LinkedList<>();
+        if (timeQuantum <= 0)
+            throw new IllegalArgumentException("Invalid time quantum");
+
         this.timeQuantum = timeQuantum;
-        this.instructionsRun = 0;
-        this.currentTask = null;
     }
 
+    // Add a task to READY queue
     public void addTask(Task task) {
+        if (task == null)
+            throw new IllegalArgumentException("Task cannot be null");
+
+        if (task.getState() == Task.State.TERMINATED)
+            throw new IllegalStateException("Task is already terminated");
+
+        task.setState(Task.State.READY);
         readyQueue.add(task);
-        System.out.println("[SCHEDULER] Task added: " + task.getTaskName() + " (Start PC: " + task.getSavedPC() + ")");
     }
 
     public Task getCurrentTask() {
         return currentTask;
     }
 
-    /**
-     * Executes one instruction step using the CPU, then updates scheduling.
-     */
+    public int getReadyQueueSize() {
+        return readyQueue.size();
+    }
+
+    public boolean hasReadyTasks() {
+        return !readyQueue.isEmpty();
+    }
+
+    // Execute one instruction
     public void step(CPU cpu) {
-        // If nothing is currently running, schedule the first available task
+
+        if (cpu == null)
+            throw new IllegalArgumentException("CPU cannot be null");
+
+        // Select a task if CPU has no current task
         if (currentTask == null) {
-            if (readyQueue.isEmpty()) {
-                System.out.println("[SCHEDULER] No tasks available to run.");
+            if (readyQueue.isEmpty())
                 return;
-            }
-            switchToNextTask(cpu);
+
+            switchTask(cpu);
         }
 
-        // Execute one instruction cycle: FETCH -> DECODE -> EXECUTE
-        Instruction instr = cpu.fetch();
-        if (instr != null) {
-            String op = cpu.decode();
+        Instruction instruction = cpu.fetch();
+
+        if (instruction != null) {
+            cpu.decode();
             cpu.execute();
             instructionsRun++;
-
-            System.out.println("[" + currentTask.getTaskName() + "] Executed: " + op 
-                + " | W=" + cpu.getW() + " | PC=" + cpu.getPC() 
-                + " (Slice: " + instructionsRun + "/" + timeQuantum + ")");
         }
 
-        // Check if current task finished (e.g. hit SLEEP or out of instructions)
+        // Task finished
         if (cpu.isHalted()) {
-            System.out.println("[SCHEDULER] " + currentTask.getTaskName() + " has completed execution.");
             currentTask.setState(Task.State.TERMINATED);
             currentTask = null;
             instructionsRun = 0;
-            // Load next task if any are left
-            if (!readyQueue.isEmpty()) {
-                switchToNextTask(cpu);
-            }
+
+            if (!readyQueue.isEmpty())
+                switchTask(cpu);
+
             return;
         }
 
-        // Context switch when the time quantum expires
-        if (instructionsRun >= timeQuantum) {
-            System.out.println("\n--- [CONTEXT SWITCH TRIGGERED] Time quantum reached ---");
+        // Time quantum finished
+        if (instructionsRun >= timeQuantum)
             contextSwitch(cpu);
-        }
     }
 
+    // Save current task and select next task
     private void contextSwitch(CPU cpu) {
+
         if (currentTask != null) {
             currentTask.saveContext(cpu);
             currentTask.setState(Task.State.READY);
             readyQueue.add(currentTask);
-            System.out.println("[SAVED CONTEXT] " + currentTask.getTaskName() 
-                + " -> Saved PC: " + currentTask.getSavedPC() 
-                + ", W: " + currentTask.getSavedW());
         }
-        switchToNextTask(cpu);
+
+        switchTask(cpu);
     }
 
-    private void switchToNextTask(CPU cpu) {
+    // Select and restore next READY task
+    private void switchTask(CPU cpu) {
+
         currentTask = readyQueue.poll();
+
         if (currentTask != null) {
             currentTask.setState(Task.State.RUNNING);
             currentTask.restoreContext(cpu);
+            cpu.resume();
             instructionsRun = 0;
-            System.out.println("[RESTORED CONTEXT] Switched to " + currentTask.getTaskName() 
-                + " -> Restored PC: " + cpu.getPC() 
-                + ", W: " + cpu.getW() + "\n");
         }
     }
 }
