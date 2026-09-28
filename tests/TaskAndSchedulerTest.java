@@ -1,5 +1,5 @@
+```java
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -17,57 +17,143 @@ public class TaskAndSchedulerTest {
         cpu = new CPU(pm, dm);
     }
 
+    // 1. Task creation
     @Test
-    @DisplayName("Task: Context save and restore correctly snapshots CPU registers")
-    public void testTaskContextSaveAndRestore() {
-        Task task = new Task(1, "WorkerTask", 0);
+    public void testTaskCreation() {
+
+        Task task = new Task(1, "TaskA", 0);
+
+        assertEquals(1, task.getTaskId());
+        assertEquals("TaskA", task.getTaskName());
         assertEquals(Task.State.READY, task.getState());
 
-        // Simulate CPU state
+        assertEquals(0, task.getSavedPC());
+        assertEquals(0, task.getSavedW());
+        assertEquals(0, task.getSavedSTATUS());
+    }
+
+    // 2. Save and restore CPU context
+    @Test
+    public void testContextSaveRestore() {
+
+        Task task = new Task(1, "TaskA", 0);
+
         cpu.setPC(15);
         cpu.setW(0x55);
-        cpu.setSTATUS(0b00000101); // C and Z flags set
+        cpu.setSTATUS(5);
 
-        // Save context into Task
         task.saveContext(cpu);
+
         assertEquals(15, task.getSavedPC());
         assertEquals(0x55, task.getSavedW());
+        assertEquals(5, task.getSavedSTATUS());
 
-        // Wipe CPU registers
         cpu.reset();
-        assertEquals(0, cpu.getPC());
-        assertEquals(0, cpu.getW());
-        assertEquals(0, cpu.getSTATUS());
-
-        // Restore context back from Task
         task.restoreContext(cpu);
+
         assertEquals(15, cpu.getPC());
         assertEquals(0x55, cpu.getW());
-        assertEquals(0b00000101, cpu.getSTATUS());
+        assertEquals(5, cpu.getSTATUS());
     }
 
+    // 3. READY -> RUNNING
     @Test
-    @DisplayName("Scheduler: Preempts task and performs context switch when time quantum expires")
-    public void testSchedulerTimeQuantumPreemption() {
-        // Load instructions: 3 MOVLW operations
-        pm.addInstruction(new Instruction("MOVLW", 1)); // PC 0
-        pm.addInstruction(new Instruction("MOVLW", 2)); // PC 1
-        pm.addInstruction(new Instruction("MOVLW", 3)); // PC 2
+    public void testReadyToRunning() {
 
-        // Quantum = 2 instructions
+        pm.addInstruction(new Instruction("MOVLW", 10));
+
         Scheduler scheduler = new Scheduler(2);
+        Task task = new Task(1, "TaskA", 0);
+
+        scheduler.addTask(task);
+
+        assertEquals(1, scheduler.getReadyQueueSize());
+
+        scheduler.step(cpu);
+
+        assertEquals(Task.State.RUNNING, task.getState());
+        assertEquals(task, scheduler.getCurrentTask());
+    }
+
+    // 4. Context switching between tasks
+    @Test
+    public void testContextSwitch() {
+
+        pm.addInstruction(new Instruction("MOVLW", 10));
+        pm.addInstruction(new Instruction("MOVLW", 20));
+
+        Scheduler scheduler = new Scheduler(1);
+
         Task taskA = new Task(1, "TaskA", 0);
+        Task taskB = new Task(2, "TaskB", 1);
+
         scheduler.addTask(taskA);
+        scheduler.addTask(taskB);
 
-        // Step 1: executes first instruction
+        // Task A runs
         scheduler.step(cpu);
+
         assertEquals(Task.State.RUNNING, taskA.getState());
+        assertEquals(10, cpu.getW());
 
-        // Step 2: executes second instruction -> triggers time quantum context switch
+        // Task B runs after quantum expires
         scheduler.step(cpu);
 
-        // After 2 steps, task context was saved, state returned to READY, and requeued
-        assertEquals(Task.State.RUNNING, scheduler.getCurrentTask().getState());
-        assertEquals(2, cpu.getPC());
+        assertEquals(Task.State.RUNNING, taskB.getState());
+        assertEquals(taskB, scheduler.getCurrentTask());
+    }
+
+    // 5. SLEEP -> TERMINATED
+    @Test
+    public void testTaskTermination() {
+
+        pm.addInstruction(new Instruction("SLEEP", 0));
+
+        Scheduler scheduler = new Scheduler(2);
+        Task task = new Task(1, "TaskA", 0);
+
+        scheduler.addTask(task);
+        scheduler.step(cpu);
+
+        assertEquals(Task.State.TERMINATED, task.getState());
+        assertNull(scheduler.getCurrentTask());
+    }
+
+    // 6. Multiple tasks
+    @Test
+    public void testMultipleTasks() {
+
+        pm.addInstruction(new Instruction("MOVLW", 10));
+        pm.addInstruction(new Instruction("SLEEP", 0));
+
+        pm.addInstruction(new Instruction("MOVLW", 20));
+        pm.addInstruction(new Instruction("SLEEP", 0));
+
+        Scheduler scheduler = new Scheduler(1);
+
+        Task taskA = new Task(1, "TaskA", 0);
+        Task taskB = new Task(2, "TaskB", 2);
+
+        scheduler.addTask(taskA);
+        scheduler.addTask(taskB);
+
+        assertEquals(2, scheduler.getReadyQueueSize());
+
+        // Run until both tasks finish
+        int count = 0;
+
+        while ((scheduler.getCurrentTask() != null ||
+                scheduler.hasReadyTasks()) && count < 10) {
+
+            scheduler.step(cpu);
+            count++;
+        }
+
+        assertEquals(Task.State.TERMINATED, taskA.getState());
+        assertEquals(Task.State.TERMINATED, taskB.getState());
+
+        assertNull(scheduler.getCurrentTask());
+        assertEquals(0, scheduler.getReadyQueueSize());
     }
 }
+```
