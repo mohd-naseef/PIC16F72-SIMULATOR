@@ -1,4 +1,3 @@
-```java
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -156,4 +155,4 @@ public class TaskAndSchedulerTest {
         assertEquals(0, scheduler.getReadyQueueSize());
     }
 }
-```
+
