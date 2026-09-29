@@ -153,4 +153,24 @@ public class InstructionSetTest {
         runSingleInstruction(new Instruction("SLEEP", 0));
         assertTrue(cpu.isHalted());
     }
+@Test
+@DisplayName("FETCH and DECODE: Fetch instruction and identify opcode")
+public void testFetchAndDecode() {
+
+    Instruction instruction =
+            new Instruction("MOVLW", 25);
+
+    programMemory.addInstruction(instruction);
+
+    cpu.setPC(0);
+
+    Instruction fetched = cpu.fetch();
+
+    assertNotNull(fetched);
+    assertEquals("MOVLW", fetched.getOpcode());
+    assertEquals("MOVLW", cpu.decode());
+
+    // FETCH should advance PC
+    assertEquals(1, cpu.getPC());
 }
+    }
