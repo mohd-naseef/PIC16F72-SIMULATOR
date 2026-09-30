@@ -78,7 +78,11 @@ reproduce real hardware behaviour.
 |--------|----------------|
 | Naseef | CPU & Instruction Execution |
 | Moksha | Memory & Stack |
+<<<<<<< HEAD
+| Anas | Scheduling & Context Switching|
+=======
 | Anas | Scheduling & Context Switching |
+>>>>>>> origin/main
 | Chinmay | Data Structures & Process Management |
 
 ## Development Plan
@@ -103,6 +107,41 @@ reproduce real hardware behaviour.
 
 ## Week 2 – Memory and Stack Implementation
 
+<<<<<<< HEAD
+**Week 1 – Planning and Development Setup**
+
+
+## Week 2 – Data Structures & Process Management
+
+### Task / PCB
+Each Task contains:
+- Task ID and name
+- Task state
+- Saved PC, W and STATUS
+
+### Task States
+- READY – waiting for CPU
+- RUNNING – currently executing
+- TERMINATED – execution finished
+
+### Ready Queue
+The Scheduler uses a FIFO queue to store READY tasks.
+
+### Context Switching
+When the time quantum ends:
+1. Current task's PC, W and STATUS are saved.
+2. Task returns to READY.
+3. Next task is selected.
+4. Saved context is restored.
+
+### Testing
+Tested:
+- Task creation
+- READY → RUNNING
+- Context save/restore
+- Multiple tasks and queue
+- Task termination
+=======
 ### 1. RAM Read/Write
 
 The simulator contains RAM for storing data.
@@ -176,3 +215,4 @@ The stack uses a fixed-size array, so its size cannot grow dynamically.
 - Pushing when the stack is full results in a stack overflow exception.
 - Values are handled as 8-bit values.
 - The implementation is a simplified software model of the PIC16F72 stack and is intended for simulator use.
+>>>>>>> origin/main
