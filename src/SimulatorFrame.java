@@ -844,6 +844,19 @@ public class SimulatorFrame extends JFrame {
         controls.add(dequeueButton);
 
         controls.add(clearConsole);
+        JButton gpioButton = new JButton("Toggle GPIO Pin");
+        gpioButton.setFont(MONO);
+        gpioButton.addActionListener(e -> {
+            if (!gpio.pinTrigger) {
+                gpio.pressButton();
+                console.append("[GPIO] Button pressed: Pin trigger set HIGH\n");
+            } else {
+                gpio.clearPinTrigger();
+                console.append("[GPIO] Pin trigger cleared: set LOW\n");
+            }
+            refreshView();
+        });
+        controls.add(gpioButton);
 
 
         // Run timer
@@ -1226,36 +1239,29 @@ private void enqueueTestValue() {
                 )
         );
 
-
-        // Timer
-
+       // Timer
         timerValue.setText(
                 String.format(
-                        "0x%02X",
-                        timer0.counter
+                        "0x%02X (%3d) | OVF: %s",
+                        timer0.counter,
+                        timer0.counter,
+                        timer0.overflow ? "YES" : "NO"
                 )
         );
 
-
         // GPIO
-
         portValue.setText(
                 gpio.pinTrigger
                         ? "RA0 = HIGH"
                         : "RA0 = LOW"
         );
 
-
         // Overall state
-
         stateValue.setText(
                 t != null
-                        ? "● RUNNING ("
-                                + t.getTaskName()
-                                + ")"
-                        : "● IDLE"
+                        ? "● RUNNING (" + t.getTaskName() + ")"
+                        : "○ IDLE"
         );
-
 
         // Program selection
 
