@@ -1305,6 +1305,8 @@ private void enqueueTestValue() {
                 message + "\n"
         );
 
+        
+
         console.setCaretPosition(
                 console.getDocument().getLength()
         );
@@ -1328,4 +1330,3 @@ private void enqueueTestValue() {
         );
     }
 }
-
