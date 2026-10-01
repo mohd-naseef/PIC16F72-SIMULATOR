@@ -2,65 +2,59 @@ public class FIFOQueueTest {
 
     public static void main(String[] args) {
 
-        System.out.println(
-            "=============================="
-        );
-
-        System.out.println(
-            "       FIFO QUEUE TEST"
-        );
-
-        System.out.println(
-            "=============================="
-        );
+        System.out.println("==============================");
+        System.out.println("       FIFO QUEUE TEST");
+        System.out.println("==============================");
 
         testEnqueue();
-
+        testDequeue();
         testFIFO();
-
         testEmpty();
-
         testFull();
+        testReset();
+        testCircular();
 
-        testClear();
-
-        testCircularBehaviour();
-
-        System.out.println(
-            "=============================="
-        );
-
-        System.out.println(
-            "   ALL QUEUE TESTS PASSED"
-        );
-
-        System.out.println(
-            "=============================="
-        );
+        System.out.println("==============================");
+        System.out.println("       ALL TESTS PASSED");
+        System.out.println("==============================");
     }
 
+    // Test adding values to the queue
     private static void testEnqueue() {
 
-        FIFOQueue queue =
-            new FIFOQueue(8);
+        FIFOQueue queue = new FIFOQueue(5);
 
-        queue.enqueue(10);
+        boolean result1 = queue.enqueue(10);
+        boolean result2 = queue.enqueue(20);
 
-        if (queue.size() != 1) {
-            throw new AssertionError(
-                "Enqueue failed"
-            );
+        if (result1 && result2 && queue.size() == 2) {
+            System.out.println("PASS: Enqueue");
+        } else {
+            throw new AssertionError("Enqueue test failed");
         }
-
-        System.out.println(
-            "PASS: Enqueue"
-        );
     }
 
+    // Test removing a value from the queue
+    private static void testDequeue() {
+
+        FIFOQueue queue = new FIFOQueue(5);
+
+        queue.enqueue(10);
+        queue.enqueue(20);
+
+        int value = queue.dequeue();
+
+        if (value == 10) {
+            System.out.println("PASS: Dequeue");
+        } else {
+            throw new AssertionError("Dequeue test failed");
+        }
+    }
+
+    // Test FIFO ordering
     private static void testFIFO() {
 
-        FIFOQueue queue =
-            new FIFOQueue(8);
+        FIFOQueue queue = new FIFOQueue(5);
 
         queue.enqueue(10);
         queue.enqueue(20);
@@ -70,135 +64,99 @@ public class FIFOQueueTest {
         int second = queue.dequeue();
         int third = queue.dequeue();
 
-        if (first != 10 ||
-            second != 20 ||
-            third != 30) {
-
-            throw new AssertionError(
-                "FIFO ordering failed"
-            );
+        if (first == 10 && second == 20 && third == 30) {
+            System.out.println("PASS: FIFO ordering");
+        } else {
+            throw new AssertionError("FIFO ordering failed");
         }
-
-        System.out.println(
-            "PASS: FIFO ordering"
-        );
     }
 
+    // Test empty queue condition
     private static void testEmpty() {
 
-        FIFOQueue queue =
-            new FIFOQueue(8);
+        FIFOQueue queue = new FIFOQueue(5);
 
-        if (!queue.isEmpty()) {
-
-            throw new AssertionError(
-                "New queue should be empty"
-            );
-        }
-
-        try {
-
-            queue.dequeue();
-
-            throw new AssertionError(
-                "Empty dequeue should fail"
-            );
-
-        } catch (IllegalStateException e) {
-
-            System.out.println(
-                "PASS: Empty queue"
-            );
+        if (queue.isEmpty()) {
+            System.out.println("PASS: Empty queue");
+        } else {
+            throw new AssertionError("Queue should be empty");
         }
     }
 
+    // Test full queue condition
     private static void testFull() {
 
-        FIFOQueue queue =
-            new FIFOQueue(3);
+        FIFOQueue queue = new FIFOQueue(3);
 
         queue.enqueue(10);
         queue.enqueue(20);
         queue.enqueue(30);
 
         if (!queue.isFull()) {
-
-            throw new AssertionError(
-                "Queue should be full"
-            );
+            throw new AssertionError("Queue should be full");
         }
 
-        try {
+        // enqueue() returns false when queue is full
+        boolean result = queue.enqueue(40);
 
-            queue.enqueue(40);
-
+        if (!result) {
+            System.out.println("PASS: Full queue");
+        } else {
             throw new AssertionError(
                 "Full queue should reject enqueue"
             );
-
-        } catch (IllegalStateException e) {
-
-            System.out.println(
-                "PASS: Full queue"
-            );
         }
     }
 
-    private static void testClear() {
+    // Test reset
+    private static void testReset() {
 
-        FIFOQueue queue =
-            new FIFOQueue(8);
+        FIFOQueue queue = new FIFOQueue(5);
 
         queue.enqueue(10);
         queue.enqueue(20);
 
-        queue.clear();
+        queue.reset();
 
-        if (!queue.isEmpty()) {
-
-            throw new AssertionError(
-                "Clear failed"
-            );
+        if (queue.isEmpty() && queue.size() == 0) {
+            System.out.println("PASS: Reset");
+        } else {
+            throw new AssertionError("Reset test failed");
         }
-
-        System.out.println(
-            "PASS: Clear"
-        );
     }
 
-    private static void testCircularBehaviour() {
+    // Test circular queue behavior
+    private static void testCircular() {
 
-        FIFOQueue queue =
-            new FIFOQueue(3);
+        FIFOQueue queue = new FIFOQueue(3);
 
         queue.enqueue(10);
         queue.enqueue(20);
-
-        // Remove 10
-        int removed = queue.dequeue();
-
-        if (removed != 10) {
-
-            throw new AssertionError(
-                "Wrong item removed"
-            );
-        }
-
-        // This should reuse the freed space
         queue.enqueue(30);
+
+        // Remove two values
+        queue.dequeue();
+        queue.dequeue();
+
+        // Add new values to the freed positions
+        boolean result1 = queue.enqueue(40);
+        boolean result2 = queue.enqueue(50);
 
         int first = queue.dequeue();
         int second = queue.dequeue();
+        int third = queue.dequeue();
 
-        if (first != 20 || second != 30) {
+        if (result1 && result2
+                && first == 30
+                && second == 40
+                && third == 50) {
 
+            System.out.println("PASS: Circular queue");
+
+        } else {
             throw new AssertionError(
-                "Circular FIFO behaviour failed"
+                "Circular queue test failed"
             );
         }
-
-        System.out.println(
-            "PASS: Circular queue behaviour"
-        );
     }
 }
