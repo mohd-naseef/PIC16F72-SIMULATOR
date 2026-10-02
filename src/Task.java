@@ -10,34 +10,44 @@ public class Task {
     private String taskName;
     private State state;
 
-    // =========================================================
-    // PCB / SAVED CPU CONTEXT
-    // =========================================================
-
+    // PCB / Saved CPU Context
     private int savedPC;
     private int savedW;
     private int savedSTATUS;
 
-    // =========================================================
-    // CONSTRUCTOR
-    // =========================================================
-
+    // Constructor used by the existing simulator
     public Task(int taskId, String taskName, int startPC) {
+        this(taskId, taskName, startPC, 0, 0);
+    }
+
+    // Constructor allowing an initial CPU context
+    public Task(int taskId, String taskName,
+                int startPC, int initialW, int initialSTATUS) {
+
+        if (taskId < 0) {
+            throw new IllegalArgumentException("Task ID cannot be negative");
+        }
+
+        if (taskName == null || taskName.trim().isEmpty()) {
+            throw new IllegalArgumentException("Task name cannot be empty");
+        }
+
+        if (startPC < 0) {
+            throw new IllegalArgumentException("Start PC cannot be negative");
+        }
 
         this.taskId = taskId;
         this.taskName = taskName;
-
-        // Initial PCB values
         this.savedPC = startPC;
-        this.savedW = 0;
-        this.savedSTATUS = 0;
+        this.savedW = initialW & 0xFF;
+        this.savedSTATUS = initialSTATUS & 0xFF;
 
-        // Every new task starts in READY state
+        // Every newly created task starts in READY state
         this.state = State.READY;
     }
 
     // =========================================================
-    // SAVE CPU CONTEXT INTO PCB
+    // PCB CONTEXT SAVE
     // =========================================================
 
     public void saveContext(CPU cpu) {
@@ -46,13 +56,13 @@ public class Task {
             throw new IllegalArgumentException("CPU cannot be null");
         }
 
-        savedPC = cpu.getPC();
-        savedW = cpu.getW();
-        savedSTATUS = cpu.getSTATUS();
+        this.savedPC = cpu.getPC();
+        this.savedW = cpu.getW();
+        this.savedSTATUS = cpu.getSTATUS();
     }
 
     // =========================================================
-    // RESTORE PCB CONTEXT INTO CPU
+    // PCB CONTEXT RESTORE
     // =========================================================
 
     public void restoreContext(CPU cpu) {
@@ -61,9 +71,9 @@ public class Task {
             throw new IllegalArgumentException("CPU cannot be null");
         }
 
-        cpu.setPC(savedPC);
-        cpu.setW(savedW);
-        cpu.setSTATUS(savedSTATUS);
+        cpu.setPC(this.savedPC);
+        cpu.setW(this.savedW);
+        cpu.setSTATUS(this.savedSTATUS);
     }
 
     // =========================================================
@@ -83,11 +93,16 @@ public class Task {
     }
 
     public void setState(State state) {
+
+        if (state == null) {
+            throw new IllegalArgumentException("Task state cannot be null");
+        }
+
         this.state = state;
     }
 
     // =========================================================
-    // PCB INFORMATION
+    // SAVED PCB VALUES
     // =========================================================
 
     public int getSavedPC() {
