@@ -141,210 +141,103 @@ public class CoreThreads {
     // =====================================================
 
     private void executeCommand(String command) {
-
         try {
+            String[] parts = command.trim().split("\\s+");
+            String operation = parts[0].toUpperCase();
 
-            String[] parts =
-                    command.trim().split("\\s+");
-
-            String operation =
-                    parts[0].toUpperCase();
-
-
-            // -----------------------------
-            // ENQUEUE
-            // -----------------------------
-
-            if (operation.equals("ENQUEUE")) {
-
-                int value =
-                        Integer.parseInt(parts[1]);
-
-                boolean success =
-                        core.enqueue(value);
-
-
-                if (success) {
-
-                    sendResult(
-                            "RESULT: ENQUEUED " + value
-                    );
-
-                    logQueue.add(
-                            "ENQUEUED " + value
-                    );
-
-                } else {
-
-                    sendResult(
-                            "RESULT: QUEUE_FULL"
-                    );
-
-                    logQueue.add(
-                            "QUEUE FULL"
-                    );
+            switch (operation) {
+                case "LOAD":
+                    sendResult(core.loadProgram());
+                    logQueue.add("PROGRAM LOADED");
+                    return;
+                case "LIST":
+                    sendResult(core.getProgramListing());
+                    return;
+                case "STEP":
+                    sendResult(core.stepProgram());
+                    logQueue.add("CPU STEP");
+                    return;
+                case "RUN":
+                    sendResult(core.runProgram());
+                    logQueue.add("CPU RUN");
+                    return;
+                case "RESET":
+                    sendResult(core.resetProgram());
+                    logQueue.add("PROGRAM RESET");
+                    return;
+                case "STATUS":
+                    sendResult(core.getStatusResponse());
+                    return;
+                    case "QUEUE":
+    sendResult("RESULT: QUEUE " + core.getQueueStatus());
+    return;
+                case "ENQUEUE": {
+                    requireParts(parts, 2);
+                    int value = Integer.decode(parts[1]);
+                    if (core.enqueue(value)) {
+                        sendResult("RESULT: ENQUEUED " + value);
+                        logQueue.add("ENQUEUED " + value);
+                    } else {
+                        sendResult("RESULT: QUEUE_FULL");
+                        logQueue.add("QUEUE FULL");
+                    }
+                    return;
                 }
-
-                return;
+                case "DEQUEUE": {
+                    int value = core.dequeue();
+                    sendResult("RESULT: DEQUEUED " + value);
+                    logQueue.add("DEQUEUED " + value);
+                    return;
+                }
+                case "WRITE": {
+                    requireParts(parts, 3);
+                    int address = Integer.decode(parts[1]);
+                    int value = Integer.decode(parts[2]);
+                    core.writeMemory(address, value);
+                    sendResult("RESULT: MEMORY_WRITTEN " + address + " " + value);
+                    logQueue.add("MEMORY WRITE " + address + " = " + value);
+                    return;
+                }
+                case "READ": {
+                    requireParts(parts, 2);
+                    int address = Integer.decode(parts[1]);
+                    sendResult("RESULT: MEMORY_READ " + address + " " + core.readMemory(address));
+                    return;
+                }
+                case "PUSH": {
+                    requireParts(parts, 2);
+                    int value = Integer.decode(parts[1]);
+                    core.pushStack(value);
+                    sendResult("RESULT: STACK_PUSHED " + value);
+                    logQueue.add("STACK PUSH " + value);
+                    return;
+                }
+                case "POP": {
+                    int value = core.popStack();
+                    sendResult("RESULT: STACK_POPPED " + value);
+                    logQueue.add("STACK POP " + value);
+                    return;
+                }
+                case "PEEK":
+                    sendResult("RESULT: STACK_TOP " + core.peekStack());
+                    return;
+                case "EXIT":
+                    sendResult("RESULT: CORE_STOPPED");
+                    return;
+                default:
+                    sendResult("RESULT: UNKNOWN_COMMAND " + operation);
             }
-
-
-            // -----------------------------
-            // DEQUEUE
-            // -----------------------------
-
-            if (operation.equals("DEQUEUE")) {
-
-                int value =
-                        core.dequeue();
-
-                sendResult(
-                        "RESULT: DEQUEUED " + value
-                );
-
-                logQueue.add(
-                        "DEQUEUED " + value
-                );
-
-                return;
-            }
-
-
-            // -----------------------------
-            // WRITE
-            // -----------------------------
-
-            if (operation.equals("WRITE")) {
-
-                int address =
-                        Integer.parseInt(parts[1]);
-
-                int value =
-                        Integer.parseInt(parts[2]);
-
-
-                core.writeMemory(
-                        address,
-                        value
-                );
-
-
-                sendResult(
-                        "RESULT: MEMORY_WRITTEN "
-                        + address + " "
-                        + value
-                );
-
-
-                logQueue.add(
-                        "MEMORY WRITE "
-                        + address + " = "
-                        + value
-                );
-
-                return;
-            }
-
-
-            // -----------------------------
-            // READ
-            // -----------------------------
-
-            if (operation.equals("READ")) {
-
-                int address =
-                        Integer.parseInt(parts[1]);
-
-
-                int value =
-                        core.readMemory(address);
-
-
-                sendResult(
-                        "RESULT: MEMORY_READ "
-                        + address + " "
-                        + value
-                );
-
-
-                logQueue.add(
-                        "MEMORY READ "
-                        + address + " = "
-                        + value
-                );
-
-                return;
-            }
-
-
-            // -----------------------------
-            // PUSH
-            // -----------------------------
-
-            if (operation.equals("PUSH")) {
-
-                int value =
-                        Integer.parseInt(parts[1]);
-
-
-                core.pushStack(value);
-
-
-                sendResult(
-                        "RESULT: STACK_PUSHED "
-                        + value
-                );
-
-
-                logQueue.add(
-                        "STACK PUSH " + value
-                );
-
-                return;
-            }
-
-
-            // -----------------------------
-            // POP
-            // -----------------------------
-
-            if (operation.equals("POP")) {
-
-                int value =
-                        core.popStack();
-
-
-                sendResult(
-                        "RESULT: STACK_POPPED "
-                        + value
-                );
-
-
-                logQueue.add(
-                        "STACK POP " + value
-                );
-
-                return;
-            }
-
-
-            sendResult(
-                    "RESULT: UNKNOWN_COMMAND"
-            );
-
-
         } catch (Exception e) {
-
-            sendResult(
-                    "RESULT: ERROR"
-            );
-
-            logQueue.add(
-                    "ERROR: " + e.getMessage()
-            );
+            sendResult("RESULT: ERROR " + e.getClass().getSimpleName() + " " + String.valueOf(e.getMessage()));
+            logQueue.add("ERROR: " + e.getMessage());
         }
     }
 
+    private void requireParts(String[] parts, int expected) {
+        if (parts.length != expected) {
+            throw new IllegalArgumentException("Expected " + (expected - 1) + " argument(s)");
+        }
+    }
 
     // =====================================================
     // SEND RESULT
