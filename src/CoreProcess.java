@@ -4,7 +4,7 @@ public class CoreProcess {
     private DataMemory dataMemory;
     private Scheduler scheduler;
     private boolean loaded;
-
+    private LogClient logger;
     public CoreProcess() {
         programMemory = new ProgramMemory();
         dataMemory = new DataMemory();
@@ -12,6 +12,8 @@ public class CoreProcess {
         scheduler = new Scheduler(2);
         loaded = false;
         System.err.println("Core Process initialized.");
+        this.logger = new LogClient("localhost", 9999);
+        this.logger.info("CoreProcess connected to LoggerProcess successfully.");
     }
 
     public synchronized String loadProgram() {
@@ -68,6 +70,9 @@ public synchronized String stepProgram() {
 
     Scheduler.ExecutionRecord record = scheduler.step(cpu);
     cpu.update_Status();
+    if (logger != null) {
+        logger.exec("Executed step: " + (record != null ? record.toString() : "No record"));
+    }
 
     if (record == null) {
         return status("PROGRAM_FINISHED");
