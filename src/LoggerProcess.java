@@ -47,7 +47,7 @@ public class LoggerProcess {
 
     public static synchronized void log(String level, String message) {
         String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS").format(new Date());
-        String formatted = String.format("[%s] [%-5s] %s", timestamp, level, message);
+        String formatted = String.format("[%s] [%-5s] %s", timestamp, level.trim(), message);
 
         // Echo to terminal
         System.out.println(formatted);
@@ -73,23 +73,42 @@ public class LoggerProcess {
                     line = line.trim();
                     if (line.isEmpty()) continue;
 
+                    // Normal graceful disconnection
+                    if ("DISCONNECT".equalsIgnoreCase(line)) {
+                        break;
+                    }
+
                     if ("CMD:SHUTDOWN".equalsIgnoreCase(line)) {
                         log("INFO", "Shutdown command received. Terminating Logger.");
                         running = false;
                         System.exit(0);
                     }
 
-                    int splitIdx = line.indexOf(':');
-                    if (splitIdx != -1) {
+                    // Format 1: Bracketed "[INFO ] message"
+                    if (line.startsWith("[") && line.contains("]")) {
+                        int endBracket = line.indexOf(']');
+                        String level = line.substring(1, endBracket).trim();
+                        String msg = line.substring(endBracket + 1).trim();
+                        log(level, msg);
+                    }
+                    // Format 2: Colon separated "INFO:message"
+                    else if (line.contains(":")) {
+                        int splitIdx = line.indexOf(':');
                         String level = line.substring(0, splitIdx).trim();
                         String msg = line.substring(splitIdx + 1).trim();
                         log(level, msg);
-                    } else {
+                    }
+                    // Format 3: Raw message fallback
+                    else {
                         log("INFO", line);
                     }
                 }
             } catch (IOException e) {
-                log("WARN", "Client connection closed: " + e.getMessage());
+                // Client closed socket normally during process shutdown
+            } finally {
+                try {
+                    socket.close();
+                } catch (IOException ignored) {}
             }
         }
     }
