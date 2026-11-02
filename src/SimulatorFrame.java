@@ -96,9 +96,9 @@ public class SimulatorFrame extends JFrame {
     private JButton peekButton;
 
 
-    // =========================================================
+    // =
     // CONSTRUCTOR
-    // =========================================================
+    // =
 
     public SimulatorFrame() {
         this(null);
@@ -240,13 +240,13 @@ if (response.startsWith("RESULT: STEP_COMPLETE")) {
     String executedW = extractField(response, "executedW");
     String nextPC = extractField(response, "nextPC");
 
-    log("========== STEP EXECUTION ==========");
+    log("=== STEP EXECUTION ===");
     log("Task        : " + executedTask);
     log("Executed PC : " + executedPC);
     log("Instruction : " + instruction);
     log("W Register  : " + executedW);
     log("Next PC     : " + nextPC);
-    log("====================================");
+    log("=");
     return;
 }
 
@@ -485,9 +485,9 @@ if (instructionPC != null) {
 }
 
 
-    // =========================================================
+    // =
     // INITIALISE MODEL
-    // =========================================================
+    // =
 
     private void initialiseModel() {
 
@@ -516,9 +516,9 @@ if (instructionPC != null) {
     }
 
 
-    // =========================================================
+    // =
     // LOAD PROGRAM
-    // =========================================================
+    // =
 
     private void loadTasks() {
         if (isRemoteUI()) {
@@ -590,9 +590,9 @@ if (instructionPC != null) {
     }
 
 
-    // =========================================================
+    // =
     // ADD INSTRUCTION
-    // =========================================================
+    // =
 
     private void add(
             String opcode,
@@ -622,9 +622,9 @@ if (instructionPC != null) {
     }
 
 
-    // =========================================================
+    // =
     // BUILD INTERFACE
-    // =========================================================
+    // =
 
     private void buildInterface() {
 
@@ -676,9 +676,9 @@ if (instructionPC != null) {
     }
 
 
-    // =========================================================
+    // =
     // HEADER
-    // =========================================================
+    // =
 
     private JPanel createHeader() {
 
@@ -741,9 +741,9 @@ if (instructionPC != null) {
     }
 
 
-    // =========================================================
+    // =
     // PROGRAM PANEL
-    // =========================================================
+    // =
 
     private JPanel createProgramPanel() {
 
@@ -815,9 +815,9 @@ if (instructionPC != null) {
     }
 
 
-    // =========================================================
+    // =
     // EXECUTION CONSOLE
-    // =========================================================
+    // =
 
     private JPanel createConsolePanel() {
 
@@ -863,9 +863,9 @@ if (instructionPC != null) {
     }
 
 
-    // =========================================================
+    // =
     // HARDWARE PANEL
-    // =========================================================
+    // =
 
     private JPanel createHardwarePanel() {
 
@@ -960,9 +960,9 @@ if (instructionPC != null) {
         );
 
 
-        // =====================================================
+        // ====
         // GPIO
-        // =====================================================
+        // ====
 
         JPanel gpioPanel =
                 new JPanel(
@@ -1047,9 +1047,9 @@ outer.add(lowerPanel, BorderLayout.CENTER);
     }
 
 
-    // =========================================================
+    // =
     // READOUT
-    // =========================================================
+    // =
 
     private JLabel readout(
             JPanel parent,
@@ -1140,9 +1140,9 @@ outer.add(lowerPanel, BorderLayout.CENTER);
     }
 
 
-    // =========================================================
+    // =
     // CONTROLS
-    // =========================================================
+    // =
 
     private JPanel createControls() {
 
@@ -1211,7 +1211,7 @@ runButton.addActionListener(e -> {
         runButton.setEnabled(false);
         stepButton.setEnabled(false);
 
-        log("========== RUN STARTED ==========");
+        log("=== RUN STARTED ===");
 
         new javax.swing.SwingWorker<Void, String>() {
 
@@ -1245,14 +1245,14 @@ runButton.addActionListener(e -> {
             protected void process(java.util.List<String> responses) {
                 for (String response : responses) {
                     if ("RUN_LOOP_COMPLETED".equals(response)) {
-                        log("========== EXECUTION COMPLETED ==========");
+                        log("=== EXECUTION COMPLETED ===");
                         continue;
                     }
 
                     if (response.startsWith("RESULT: STEP_COMPLETE")) {
                         showRemoteResponse(response);
 
-                        log("========== STEP EXECUTION ==========");
+                        log("=== STEP EXECUTION ===");
                         log("Task        : " +
                                 extractField(response, "executedTask"));
                         log("Executed PC : " +
@@ -1263,7 +1263,7 @@ runButton.addActionListener(e -> {
                                 extractField(response, "executedW"));
                         log("Next PC     : " +
                                 extractField(response, "nextPC"));
-                        log("====================================");
+                        log("=");
                     } else {
                         log("RUN stopped: " + response);
                     }
@@ -1342,7 +1342,10 @@ runButton.addActionListener(e -> {
         controls.add(clearConsole);
         JButton gpioButton = new JButton("Toggle GPIO Pin");
         gpioButton.setFont(MONO);
+
         gpioButton.setEnabled(!isRemoteUI());
+
+
         gpioButton.addActionListener(e -> {
             if (!gpio.pinTrigger) {
                 gpio.pressButton();
@@ -1369,9 +1372,9 @@ runButton.addActionListener(e -> {
     }
 
 
-    // =========================================================
+    // =
     // TITLED PANEL
-    // =========================================================
+    // =
 
     private JPanel titledPanel(
             String title,
@@ -1432,9 +1435,9 @@ runButton.addActionListener(e -> {
     }
 
 
-    // =========================================================
+    // =
     // WEEK 2 CPU STEP
-    // =========================================================
+    // =
 
     private void executeStep() {
         if (isRemoteUI()) {
@@ -1514,9 +1517,9 @@ runButton.addActionListener(e -> {
     }
 
 
-    // =========================================================
+    // =
     // RUN / PAUSE
-    // =========================================================
+    // =
 
     private void toggleRun() {
         if (isRemoteUI()) {
@@ -1541,9 +1544,9 @@ runButton.addActionListener(e -> {
     }
 
 
-    // =========================================================
+    // =
     // STOP
-    // =========================================================
+    // =
 
     private void stopRun() {
 
@@ -1557,9 +1560,9 @@ runButton.addActionListener(e -> {
     }
 
 
-    // =========================================================
+    // =
     // RESET
-    // =========================================================
+    // =
 
     private void resetSimulator() {
         if (isRemoteUI()) {
@@ -1591,9 +1594,9 @@ runButton.addActionListener(e -> {
     }
 
 
-    // =========================================================
+    // =
     // WEEK 3 - ENQUEUE
-    // =========================================================
+    // =
 
 
 private void enqueueTestValue() {
@@ -1632,9 +1635,9 @@ private void enqueueTestValue() {
 }
 
 
-    // =========================================================
+    // =
     // WEEK 3 - DEQUEUE
-    // =========================================================
+    // =
 
     private void dequeueValue() {
         if (isRemoteUI()) {
@@ -1672,9 +1675,9 @@ private void enqueueTestValue() {
     }
 
 
-    // =========================================================
+    // =
     // STATUS FLAGS
-    // =========================================================
+    // =
 
     private String flags() {
 
@@ -1691,9 +1694,9 @@ private void enqueueTestValue() {
     }
 
 
-    // =========================================================
+    // =
     // REFRESH GUI
-    // =========================================================
+    // =
 
      {
    Task t = (scheduler != null) ? scheduler.getCurrentTask() : null;
@@ -1711,10 +1714,13 @@ private void enqueueTestValue() {
 
         // CPU
 private void refreshView() {
+
         if (isRemoteUI()) {
             showRemoteResponse("INITIAL");
             return;
         }
+
+
 
         wValue.setText(
                 String.format(
@@ -1744,9 +1750,9 @@ private void refreshView() {
                 )
         );
 
-        // =====================================================
+        // ====
         // WEEK 3 FIFO QUEUE DISPLAY
-        // =====================================================
+        // ====
         queueValue.setText(
                 String.format(
                         "size=%d %s",
@@ -1797,9 +1803,9 @@ private void refreshView() {
                 isLoaded
         );
 
-        // =========================================================
+        // =
         // HARDWARE STACK UPDATE (WEEK 3)
-        // =========================================================
+        // =
         if (stackDisplayArea != null && spValue != null && dataMemory != null) {
             int currentSp = dataMemory.getSP();
             spValue.setText(String.format("SP: %d / 8", currentSp));
@@ -1816,9 +1822,9 @@ private void refreshView() {
     }
 
 
-    // =========================================================
+    // =
     // CONSOLE LOG
-    // =========================================================
+    // =
 
     private void log(
             String message
@@ -1832,9 +1838,9 @@ private void refreshView() {
                 console.getDocument().getLength()
         );
     }
-// =========================================================
+// =
     // STACK UI PANEL (WEEK 3)
-    // =========================================================
+    // =
 
     private JPanel createStackPanel() {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
@@ -1868,6 +1874,7 @@ private void refreshView() {
 
         // Action Listeners
         pushButton.addActionListener(e -> {
+
             if (isRemoteUI()) {
                 try {
                     String text = stackInputField.getText().trim();
@@ -1882,6 +1889,8 @@ private void refreshView() {
                 }
                 return;
             }
+
+
 
             try {
                 String text = stackInputField.getText().trim();
@@ -1901,10 +1910,13 @@ private void refreshView() {
         });
 
         popButton.addActionListener(e -> {
+
             if (isRemoteUI()) {
                 sendCoreCommand("POP");
                 return;
             }
+
+
 
             try {
                 int val = dataMemory.pop();
@@ -1916,6 +1928,7 @@ private void refreshView() {
                 JOptionPane.showMessageDialog(this, ex.getMessage(), "Stack Error", JOptionPane.ERROR_MESSAGE);
             }
         });
+
 
     peekButton.setEnabled(true);
 
@@ -1945,12 +1958,23 @@ peekButton.addActionListener(e -> {
     }
 });
 
+        peekButton.addActionListener(e -> {
+            int sp = dataMemory.getSP();
+            if (sp <= 0) {
+                JOptionPane.showMessageDialog(this, "Stack is empty!", "Stack Peek", JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                int topVal = dataMemory.getStackElement(sp - 1);
+                JOptionPane.showMessageDialog(this, String.format("Top of Stack (Level %d): 0x%04X", (sp - 1), topVal), "Stack Peek", JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+
+
         return panel;
     }
 
-    // =========================================================
+    // =
     // MAIN
-    // =========================================================
+    // =
 
     public static void main(
             String[] args
