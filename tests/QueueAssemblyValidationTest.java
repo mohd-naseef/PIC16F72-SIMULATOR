@@ -1,3 +1,6 @@
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 
 public class QueueAssemblyValidationTest {
 
@@ -12,48 +15,28 @@ public class QueueAssemblyValidationTest {
         DataMemory dataMemory = new DataMemory();
         FIFOQueue queue = new FIFOQueue(8);
 
-        // ------------------------------------------------
-        // PIC16F72 Assembly-equivalent program
-        //
-        // MOVLW 10
-        // MOVWF 0x30
-        //
-        // MOVLW 20
-        // MOVWF 0x31
-        //
-        // MOVLW 30
-        // MOVWF 0x32
-        //
-        // SLEEP
-        // ------------------------------------------------
+        // Load the actual Assembly file
+        String fileName = "tests\\QueueAssemblyValidation.asm";
 
-        programMemory.addInstruction(new Instruction("MOVLW", 10));
-        programMemory.addInstruction(new Instruction("MOVWF", 0x30));
-
-        programMemory.addInstruction(new Instruction("MOVLW", 20));
-        programMemory.addInstruction(new Instruction("MOVWF", 0x31));
-
-        programMemory.addInstruction(new Instruction("MOVLW", 30));
-        programMemory.addInstruction(new Instruction("MOVWF", 0x32));
-
-        programMemory.addInstruction(new Instruction("SLEEP", 0));
-
-        CPU cpu = new CPU(programMemory, dataMemory);
+        try {
+            loadAssemblyFile(fileName, programMemory);
+        } catch (IOException e) {
+            System.out.println("ERROR: Could not read Assembly file.");
+            System.out.println(e.getMessage());
+            return;
+        }
 
         System.out.println();
-        System.out.println("ASSEMBLY PROGRAM:");
-        System.out.println("MOVLW 10");
-        System.out.println("MOVWF 0x30");
-        System.out.println("MOVLW 20");
-        System.out.println("MOVWF 0x31");
-        System.out.println("MOVLW 30");
-        System.out.println("MOVWF 0x32");
-        System.out.println("SLEEP");
+        System.out.println("Assembly file loaded successfully:");
+        System.out.println(fileName);
 
         System.out.println();
         System.out.println("----- CPU EXECUTION -----");
 
-        // Execute Assembly-equivalent program
+        // Create CPU using the loaded Assembly program
+        CPU cpu = new CPU(programMemory, dataMemory);
+
+        // Execute the loaded Assembly program
         while (!cpu.isHalted()) {
 
             Instruction instruction = cpu.fetch();
@@ -81,20 +64,21 @@ public class QueueAssemblyValidationTest {
         System.out.println();
         System.out.println("----- MEMORY VALIDATION -----");
 
-        System.out.println(
-                "Memory[0x30] = "
-                + dataMemory.read(0x30)
-        );
+        int value1 = dataMemory.read(0x30);
+        int value2 = dataMemory.read(0x31);
+        int value3 = dataMemory.read(0x32);
 
-        System.out.println(
-                "Memory[0x31] = "
-                + dataMemory.read(0x31)
-        );
+        System.out.println("Memory[0x30] = " + value1);
+        System.out.println("Memory[0x31] = " + value2);
+        System.out.println("Memory[0x32] = " + value3);
 
-        System.out.println(
-                "Memory[0x32] = "
-                + dataMemory.read(0x32)
-        );
+        // Check that Assembly execution stored the
+        // expected values in memory.
+        if (value1 == 10 && value2 == 20 && value3 == 30) {
+            System.out.println("PASS: Assembly memory values");
+        } else {
+            System.out.println("FAIL: Assembly memory values");
+        }
 
         // ------------------------------------------------
         // FIFO ENQUEUE VALIDATION
@@ -103,17 +87,26 @@ public class QueueAssemblyValidationTest {
         System.out.println();
         System.out.println("----- FIFO ENQUEUE -----");
 
-        boolean e1 = queue.enqueue(dataMemory.read(0x30));
-        boolean e2 = queue.enqueue(dataMemory.read(0x31));
-        boolean e3 = queue.enqueue(dataMemory.read(0x32));
-
-        System.out.println("Enqueue 10: " + (e1 ? "PASS" : "FAIL"));
-        System.out.println("Enqueue 20: " + (e2 ? "PASS" : "FAIL"));
-        System.out.println("Enqueue 30: " + (e3 ? "PASS" : "FAIL"));
+        boolean e1 = queue.enqueue(value1);
+        boolean e2 = queue.enqueue(value2);
+        boolean e3 = queue.enqueue(value3);
 
         System.out.println(
-                "Queue: " + queue
+                "Enqueue " + value1 + ": "
+                + (e1 ? "PASS" : "FAIL")
         );
+
+        System.out.println(
+                "Enqueue " + value2 + ": "
+                + (e2 ? "PASS" : "FAIL")
+        );
+
+        System.out.println(
+                "Enqueue " + value3 + ": "
+                + (e3 ? "PASS" : "FAIL")
+        );
+
+        System.out.println("Queue: " + queue);
 
         // ------------------------------------------------
         // FIFO DEQUEUE VALIDATION
@@ -154,13 +147,102 @@ public class QueueAssemblyValidationTest {
         System.out.println();
         System.out.println("========================================");
 
-        if (fifoCorrect) {
+        if (value1 == 10
+                && value2 == 20
+                && value3 == 30
+                && e1
+                && e2
+                && e3
+                && fifoCorrect) {
+
             System.out.println(" ALL QUEUE VALIDATION TESTS PASSED");
+
         } else {
+
             System.out.println(" QUEUE VALIDATION FAILED");
         }
 
         System.out.println("========================================");
     }
+
+
+    // ====================================================
+    // LOAD ASSEMBLY FILE
+    // ====================================================
+
+    private static void loadAssemblyFile(
+            String fileName,
+            ProgramMemory programMemory
+    ) throws IOException {
+
+        BufferedReader reader =
+                new BufferedReader(
+                        new FileReader(fileName)
+                );
+
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+
+            // Remove comments
+            int commentPosition = line.indexOf(';');
+
+            if (commentPosition >= 0) {
+                line = line.substring(0, commentPosition);
+            }
+
+            line = line.trim();
+
+            // Ignore empty lines
+            if (line.isEmpty()) {
+                continue;
+            }
+
+            // Separate opcode and operand
+            String[] parts =
+                    line.split("\\s+");
+
+            String opcode =
+                    parts[0].toUpperCase();
+
+            int operand = 0;
+
+            // Read operand if present
+            if (parts.length > 1) {
+                operand = parseOperand(parts[1]);
+            }
+
+            // Add instruction to ProgramMemory
+            programMemory.addInstruction(
+                    new Instruction(opcode, operand)
+            );
+        }
+
+        reader.close();
+    }
+
+
+    // ====================================================
+    // CONVERT ASSEMBLY OPERAND
+    // ====================================================
+
+    private static int parseOperand(String text) {
+
+        text = text.trim();
+
+        // Hexadecimal value such as 0x30
+        if (text.startsWith("0x")
+                || text.startsWith("0X")) {
+
+            return Integer.parseInt(
+                    text.substring(2),
+                    16
+            );
+        }
+
+        // Decimal value such as 10, 20, 30
+        return Integer.parseInt(text);
+    }
 }
+
 

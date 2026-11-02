@@ -71,3 +71,22 @@ public class PeripheralsAndMemoryTest {
         assertFalse(timer.overflow);
     }
 }
+// ================= RESET TEST =================
+@Test
+@DisplayName("Reset: clears RAM, stack, SP, and queue")
+public void testReset() {
+
+    DataMemory dm = new DataMemory();
+
+    dm.write(0x10, 0x55);
+    dm.push(0x100);
+    dm.push(0x200);
+
+    assertEquals(0x55, dm.read(0x10));
+    assertEquals(2, dm.getSP());
+
+    dm.reset();
+
+    assertEquals(0, dm.read(0x10));
+    assertEquals(0, dm.getSP());
+}

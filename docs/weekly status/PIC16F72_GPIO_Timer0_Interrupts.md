@@ -61,3 +61,43 @@ With a 1:4 prescaler, TMR0 (Timer 0 Register) only increases by 1 after every 4 
 
    ### Real life example:
 You are cooking dinner. The doorbell rings (an interrupt). You put a bookmark on your recipe (save address to stack), walk straight to the front door (jump to address 0004h), answer the door (run the ISR), and return to your recipe bookmark (resume seamlessly) without restarting dinner.
+---
+
+## Week 3 Updates & Testing
+
+### What was done:
+- Added a working "Toggle RA0" button to test Port A pin states directly from the GUI.
+- Added live status displays for Port A and Timer0 in the Hardware panel.
+- Connected Timer0 to increment automatically on each CPU instruction step.
+
+### Test Results (Expected vs Actual):
+
+1. **GUI Launch**
+   - **Test:** Started the simulator using `java -cp bin SimulatorFrame`.
+   - **Expected:** Window opens showing Program Memory, Console, and Hardware registers.
+   - **Actual:** GUI launched cleanly with all panels visible and functioning.
+   - **Status:** PASS
+
+2. **GPIO Pin Toggle**
+   - **Test:** Clicked the "Toggle RA0 button" on the UI.
+   - **Expected:** PORT A indicator switches between HIGH and LOW.
+   - **Actual:** Pin state toggled immediately with each click.
+   - **Status:** PASS
+
+3. **Timer0 Counting**
+   - **Test:** Stepped through instructions for Task 1 and Task 2.
+   - **Expected:** Timer0 counter increments by 1 after each instruction execution.
+   - **Actual:** Counter incremented steadily with each step, reaching 0x0B (11) after 11 instruction steps.
+   - **Status:** PASS
+
+4. **Timer0 Overflow**
+   - **Test:** Let the counter roll past 255 (0xFF).
+   - **Expected:** Counter resets to 0 and trips the overflow flag.
+   - **Actual:** Counter rolled over to 0x00 and OVF updated to YES.
+   - **Status:** PASS
+
+5. **Full System Integration**
+   - **Test:** Ran the cooperative scheduler with both tasks executing.
+   - **Expected:** CPU, Memory, Timer0, and GPIO run together without breaking context switches.
+   - **Actual:** Tasks switched normally in the console while hardware status updated live.
+   - **Status:** PASS

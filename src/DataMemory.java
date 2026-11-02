@@ -72,6 +72,9 @@ public class DataMemory {
         return queue;
     }
 
+    public String getQueueStatus() {
+    return queue.toString();
+}
     public boolean enqueue(int value) {
         boolean success = queue.enqueue(value);
         syncQueueToRam();
