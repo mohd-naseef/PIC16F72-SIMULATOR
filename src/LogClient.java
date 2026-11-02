@@ -27,38 +27,33 @@ public class LogClient {
     }
 
     public synchronized void log(String level, String message) {
-        if (out == null) {
+        if (out == null || socket == null || socket.isClosed()) {
             connect();
         }
         if (out != null) {
-            out.println(level + ":" + message);
+            // Pads level to 5 chars so columns align: [INFO ], [DEBUG], etc.
+            String paddedLevel = String.format("%-5s", level);
+            out.println("[" + paddedLevel + "] " + message);
+        } else {
+            System.out.println("[FALLBACK " + level + "] " + message);
         }
     }
 
-    public void info(String message) {
-        log("INFO", message);
-    }
-
-    public void debug(String message) {
-        log("DEBUG", message);
-    }
-
-    public void exec(String message) {
-        log("EXEC", message);
-    }
-
-    public void warn(String message) {
-        log("WARN", message);
-    }
-
-    public void error(String message) {
-        log("ERROR", message);
-    }
+    public void info(String message)  { log("INFO", message); }
+    public void debug(String message) { log("DEBUG", message); }
+    public void exec(String message)  { log("EXEC", message); }
+    public void warn(String message)  { log("WARN", message); }
+    public void error(String message) { log("ERROR", message); }
 
     public synchronized void close() {
         try {
-            if (out != null) out.close();
-            if (socket != null) socket.close();
+            if (out != null) {
+                out.println("DISCONNECT");
+                out.close();
+            }
+            if (socket != null && !socket.isClosed()) {
+                socket.close();
+            }
         } catch (IOException ignored) {}
     }
 }
