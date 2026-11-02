@@ -4,7 +4,7 @@
 - **Selected IPC:** POSIX Sockets (TCP Loopback / Stream Sockets, Port 9999 for Logger)
 - **Processes Involved:** UI Process, Core Process, Logging Process
 
-## 2. Technical Justification
+## 2.  Technical Justification
 1. **Decoupling and Asynchronous Handling:**
    - Logging operates independently from the CPU execution core. Using stream sockets allows the Logger process to buffer and persist logs without blocking time-sensitive microcontroller simulation cycles in CoreProcess.
 2. **Platform & POSIX Compatibility:**
