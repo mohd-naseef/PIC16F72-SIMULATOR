@@ -35,7 +35,9 @@ public class LogClient {
             String paddedLevel = String.format("%-5s", level);
             out.println("[" + paddedLevel + "] " + message);
         } else {
-            System.out.println("[FALLBACK " + level + "] " + message);
+            // Must go to stderr: stdout of the Core process is the IPC pipe
+            // to the UI, and any extra line there corrupts LOAD/STEP/RUN.
+            System.err.println("[FALLBACK " + level + "] " + message);
         }
     }
 

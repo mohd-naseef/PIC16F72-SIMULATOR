@@ -278,7 +278,7 @@ public class CPU {
 
             default:
 
-                System.out.println(
+                System.err.println(
                         "Unknown instruction: " + opcode
                 );
         }
