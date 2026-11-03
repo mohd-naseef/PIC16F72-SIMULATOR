@@ -216,6 +216,47 @@ public class CPU {
             }
 
             // -------------------------------------------------
+            // LOGIC GATES (OR / XOR / NOT, plus register forms)
+            // -------------------------------------------------
+
+            case "IORLW":          // W = W OR k
+                W = (W | operand) & 0xFF;
+                updateZeroFlag(W);
+                break;
+
+            case "XORLW":          // W = W XOR k
+                W = (W ^ operand) & 0xFF;
+                updateZeroFlag(W);
+                break;
+
+            case "NOT":            // W = NOT W (8-bit)
+                W = (~W) & 0xFF;
+                updateZeroFlag(W);
+                break;
+
+            case "ANDWF":          // W = W AND RAM[f]
+                W = W & dataMemory.read(operand) & 0xFF;
+                updateZeroFlag(W);
+                break;
+
+            case "IORWF":          // W = W OR RAM[f]
+                W = (W | dataMemory.read(operand)) & 0xFF;
+                updateZeroFlag(W);
+                break;
+
+            case "XORWF":          // W = W XOR RAM[f]
+                W = (W ^ dataMemory.read(operand)) & 0xFF;
+                updateZeroFlag(W);
+                break;
+
+            case "COMF": {         // RAM[f] = NOT RAM[f]
+                int result = (~dataMemory.read(operand)) & 0xFF;
+                dataMemory.write(operand, result);
+                updateZeroFlag(result);
+                break;
+            }
+
+            // -------------------------------------------------
             // CONTROL FLOW
             // -------------------------------------------------
 

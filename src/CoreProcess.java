@@ -42,6 +42,87 @@ public class CoreProcess {
         return "RESULT: PROGRAM_LOADED count=" + programMemory.size();
     }
 
+    private static final java.util.Set<String> SUPPORTED_OPCODES =
+            new java.util.HashSet<>(java.util.Arrays.asList(
+                    "MOVLW", "MOVWF", "ADDLW", "SUBLW",
+                    "ANDLW", "IORLW", "XORLW", "NOT",
+                    "ANDWF", "IORWF", "XORWF", "COMF",
+                    "INCF", "GOTO", "SLEEP"));
+
+    /**
+     * Loads a user-written program. Format: "MOVLW 10;MOVWF 20;SLEEP 0".
+     * The whole program is validated first; on error nothing is changed.
+     */
+    public synchronized String loadProgram(String spec) {
+        java.util.List<Instruction> parsed = new java.util.ArrayList<>();
+
+        if (spec == null || spec.trim().isEmpty()) {
+            throw new IllegalArgumentException("Program is empty");
+        }
+
+        String[] entries = spec.trim().split(";");
+        for (int i = 0; i < entries.length; i++) {
+            String entry = entries[i].trim();
+            if (entry.isEmpty()) {
+                continue;
+            }
+            String[] f = entry.split("\\s+");
+            String opcode = f[0].toUpperCase();
+            if (!SUPPORTED_OPCODES.contains(opcode)) {
+                throw new IllegalArgumentException(
+                        "Unknown opcode '" + f[0] + "' at address " + parsed.size());
+            }
+            int operand = 0;
+            if (f.length > 1) {
+                try {
+                    operand = Integer.decode(f[1]);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException(
+                            "Bad operand '" + f[1] + "' at address " + parsed.size());
+                }
+                if (operand < 0 || operand > 255) {
+                    throw new IllegalArgumentException(
+                            "Operand out of range 0-255 at address " + parsed.size());
+                }
+            }
+            parsed.add(new Instruction(opcode, operand));
+        }
+
+        if (parsed.isEmpty()) {
+            throw new IllegalArgumentException("Program is empty");
+        }
+        for (int i = 0; i < parsed.size(); i++) {
+            Instruction in = parsed.get(i);
+            if (in.getOpcode().equals("GOTO") && in.getOperand() >= parsed.size()) {
+                throw new IllegalArgumentException(
+                        "GOTO target " + in.getOperand() + " at address " + i
+                        + " is outside the program");
+            }
+        }
+
+        programMemory.clear();
+        dataMemory.reset();
+        cpu.reset();
+        scheduler = new Scheduler(2);
+
+        for (Instruction in : parsed) {
+            programMemory.addInstruction(in);
+        }
+
+        // Task 1 starts at 0; Task 2 starts after the first SLEEP if
+        // more code follows it.
+        scheduler.addTask(new Task(1, "Task 1", 0));
+        for (int i = 0; i < parsed.size() - 1; i++) {
+            if (parsed.get(i).getOpcode().equals("SLEEP")) {
+                scheduler.addTask(new Task(2, "Task 2", i + 1));
+                break;
+            }
+        }
+
+        loaded = true;
+        return "RESULT: PROGRAM_LOADED count=" + programMemory.size();
+    }
+
     // Format: RESULT: PROGRAM_LIST 0|MOVLW|10;1|MOVWF|20;...
     public synchronized String getProgramListing() {
         if (!loaded) return "RESULT: ERROR_PROGRAM_NOT_LOADED";

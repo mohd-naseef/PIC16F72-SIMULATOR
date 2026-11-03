@@ -2,23 +2,29 @@ import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.Graphics;
 import java.awt.GridLayout;
+import java.awt.Rectangle;
+import java.awt.Shape;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
-import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
-import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
 import javax.swing.Timer;
 import javax.swing.border.TitledBorder;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Highlighter;
+import javax.swing.text.JTextComponent;
 
 /**
  * Educational desktop-style visual front end for the
@@ -52,7 +58,14 @@ public class SimulatorFrame extends JFrame {
     private final List<String> programLines =
             new ArrayList<>();
 
-    private JList<String> programList;
+    // Editable program text area (one instruction per line).
+    private JTextArea programArea;
+    private JTextArea programGutter;
+    private JLabel programStatus;
+    private boolean updatingProgramText = false;
+    private Object pcHighlightTag;
+    // Maps instruction address -> text line number in programArea.
+    private List<Integer> instructionLines = new ArrayList<>();
 
     private JTextArea console;
 
@@ -138,6 +151,20 @@ private void sendCoreCommand(String command) {
 
 try {
     String response = uiIpc.sendCommand(command);
+
+    // A rejected user program: show the Core's reason and stop.
+    if (command.trim().toUpperCase().startsWith("LOADPROG")
+            && (response == null
+                || !response.startsWith("RESULT: PROGRAM_LOADED"))) {
+        log("Program rejected by Core: " + response);
+        JOptionPane.showMessageDialog(
+                this,
+                String.valueOf(response),
+                "Program Rejected",
+                JOptionPane.ERROR_MESSAGE
+        );
+        return;
+    }
     // Handle FIFO queue response directly in the GUI.
 if (command.trim().equalsIgnoreCase("QUEUE")) {
     if (response != null && response.startsWith("RESULT: QUEUE ")) {
@@ -197,7 +224,8 @@ if (command.trim().equalsIgnoreCase("PEEK")
 
 
     // LOAD: Load the program and display all instructions.
-    if (command.equalsIgnoreCase("LOAD")
+    if ((command.equalsIgnoreCase("LOAD")
+            || command.trim().toUpperCase().startsWith("LOADPROG "))
             && response != null
             && response.startsWith("RESULT: PROGRAM_LOADED")) {
 
@@ -381,23 +409,21 @@ private void showRemoteResponse(String response) {
                     String opcode = fields[1];
                     String operand = fields[2];
 
-                    programLines.add(String.format(
-                            "%02d       %-8s %s",
-                            address, opcode, operand
-                    ));
+                    programLines.add(
+                            operand.trim().isEmpty()
+                                    ? opcode
+                                    : opcode + " " + operand.trim()
+                    );
                 } catch (NumberFormatException ex) {
                     log("Invalid program memory entry: " + entry);
                 }
             }
         }
 
-        programList.setListData(
-                programLines.toArray(new String[0])
-        );
+        showProgramListing();
 
         if (!programLines.isEmpty()) {
-            programList.setSelectedIndex(0);
-            programList.ensureIndexIsVisible(0);
+            highlightProgramLine(0);
         }
 
         isLoaded = !programLines.isEmpty();
@@ -462,8 +488,7 @@ if (instructionPC != null) {
         int pc = Integer.parseInt(instructionPC);
 
         if (pc >= 0 && pc < programLines.size()) {
-            programList.setSelectedIndex(pc);
-            programList.ensureIndexIsVisible(pc);
+            highlightProgramLine(pc);
         }
     } catch (NumberFormatException ignored) {
         // Ignore an invalid PC value.
@@ -577,9 +602,7 @@ if (instructionPC != null) {
 
         isLoaded = true;
 
-        programList.setListData(
-                programLines.toArray(new String[0])
-        );
+        showProgramListing();
 
         console.setText(
                 "Program loaded. OS Scheduler ready with Task 1 and Task 2.\n"
@@ -604,7 +627,7 @@ if (instructionPC != null) {
         );
 
         String operandText =
-                opcode.equals("SLEEP")
+                opcode.equals("SLEEP") || opcode.equals("NOT")
                         ? ""
                         : String.format(
                                 "0x%02X",
@@ -612,13 +635,305 @@ if (instructionPC != null) {
                         );
 
         programLines.add(
-                String.format(
-                        "%02d    %-7s %s",
-                        programLines.size(),
-                        opcode,
-                        operandText
-                )
+                operandText.isEmpty()
+                        ? opcode
+                        : opcode + " " + operandText
         );
+    }
+
+
+    // =========================================================
+    // EDITABLE PROGRAM AREA
+    // =========================================================
+
+    /** Highlights a whole line in the program area. */
+    private static final class LinePainter
+            implements Highlighter.HighlightPainter {
+
+        private final Color color;
+
+        LinePainter(Color color) {
+            this.color = color;
+        }
+
+        @Override
+        @SuppressWarnings("deprecation")
+        public void paint(Graphics g, int p0, int p1,
+                          Shape bounds, JTextComponent c) {
+            try {
+                Rectangle r = c.modelToView(p0);
+                g.setColor(color);
+                g.fillRect(0, r.y, c.getWidth(), r.height);
+            } catch (BadLocationException ignored) {
+                // Line no longer exists.
+            }
+        }
+    }
+
+    private static final java.util.Set<String> SUPPORTED_OPCODES =
+            new java.util.HashSet<>(java.util.Arrays.asList(
+                    "MOVLW", "MOVWF", "ADDLW", "SUBLW",
+                    "ANDLW", "IORLW", "XORLW", "NOT",
+                    "ANDWF", "IORWF", "XORWF", "COMF",
+                    "INCF", "GOTO", "SLEEP"));
+
+    private static final class ParsedInstruction {
+        final String opcode;
+        final int operand;
+        final boolean hasOperand;
+        final int line;
+
+        ParsedInstruction(String opcode, int operand,
+                          boolean hasOperand, int line) {
+            this.opcode = opcode;
+            this.operand = operand;
+            this.hasOperand = hasOperand;
+            this.line = line;
+        }
+    }
+
+    /** Fills the text area from programLines (one instruction per line). */
+    private void showProgramListing() {
+        updatingProgramText = true;
+        try {
+            programArea.setText(String.join("\n", programLines));
+            programArea.setCaretPosition(0);
+
+            instructionLines = new ArrayList<>();
+            for (int i = 0; i < programLines.size(); i++) {
+                instructionLines.add(i);
+            }
+            pcHighlightTag = null;
+            programArea.getHighlighter().removeAllHighlights();
+        } finally {
+            updatingProgramText = false;
+        }
+        refreshProgramGutter();
+        programStatus.setText(
+                "One instruction per line, e.g. MOVLW 0x0A. "
+                        + "';' starts a comment."
+        );
+        programStatus.setForeground(Color.BLACK);
+    }
+
+    private void programTextChanged() {
+        refreshProgramGutter();
+        if (!updatingProgramText) {
+            programStatus.setText(
+                    "Edited - click APPLY PROGRAM to load it."
+            );
+            programStatus.setForeground(new Color(176, 96, 0));
+        }
+    }
+
+    /** Shows the address of each instruction line next to the text. */
+    private void refreshProgramGutter() {
+        if (programGutter == null) {
+            return;
+        }
+        List<ParsedInstruction> parsed =
+                parseProgramText(programArea.getText(), null);
+
+        int lineCount = Math.max(1, programArea.getLineCount());
+        String[] labels = new String[lineCount];
+        for (int i = 0; i < lineCount; i++) {
+            labels[i] = "";
+        }
+        for (int addr = 0; addr < parsed.size(); addr++) {
+            int line = parsed.get(addr).line;
+            if (line < lineCount) {
+                labels[line] = String.format("%02d", addr);
+            }
+        }
+        programGutter.setText(String.join("\n", labels));
+    }
+
+    /** Highlights the instruction at the given address. */
+    private void highlightProgramLine(int address) {
+        if (programArea == null) {
+            return;
+        }
+        int line = (address >= 0 && address < instructionLines.size())
+                ? instructionLines.get(address)
+                : address;
+        try {
+            Highlighter h = programArea.getHighlighter();
+            if (pcHighlightTag != null) {
+                h.removeHighlight(pcHighlightTag);
+                pcHighlightTag = null;
+            }
+            if (line < 0 || line >= programArea.getLineCount()) {
+                return;
+            }
+            int start = programArea.getLineStartOffset(line);
+            int end = programArea.getLineEndOffset(line);
+            pcHighlightTag = h.addHighlight(
+                    start,
+                    Math.max(end, start + 1),
+                    new LinePainter(new Color(184, 214, 245))
+            );
+            Rectangle r = programArea.modelToView(start);
+            if (r != null) {
+                programArea.scrollRectToVisible(r);
+            }
+            programArea.repaint();
+        } catch (BadLocationException ignored) {
+            // Ignore an out-of-range line.
+        }
+    }
+
+    /**
+     * Parses the text area. Blank lines and ';' comments are skipped.
+     * Syntax errors are added to errors when it is non-null.
+     */
+    private List<ParsedInstruction> parseProgramText(
+            String text, List<String> errors) {
+
+        List<ParsedInstruction> result = new ArrayList<>();
+        String[] lines = text.split("\\R", -1);
+
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            int comment = line.indexOf(';');
+            if (comment >= 0) {
+                line = line.substring(0, comment);
+            }
+            line = line.trim();
+            if (line.isEmpty()) {
+                continue;
+            }
+
+            String[] parts = line.split("[\\s,]+", 2);
+            String opcode = parts[0].toUpperCase();
+
+            if (!SUPPORTED_OPCODES.contains(opcode)) {
+                if (errors != null) {
+                    errors.add("Line " + (i + 1) + ": unknown instruction '"
+                            + parts[0] + "' (supported: MOVLW, MOVWF, ADDLW, "
+                            + "SUBLW, ANDLW, IORLW, XORLW, NOT, ANDWF, IORWF, "
+                            + "XORWF, COMF, INCF, GOTO, SLEEP)");
+                }
+                continue;
+            }
+
+            if (!opcode.matches("[A-Z][A-Z0-9]*")) {
+                if (errors != null) {
+                    errors.add("Line " + (i + 1)
+                            + ": invalid instruction '" + parts[0] + "'");
+                }
+                continue;
+            }
+
+            int operand = 0;
+            boolean hasOperand = parts.length > 1
+                    && !parts[1].trim().isEmpty();
+
+            if (hasOperand) {
+                String t = parts[1].trim();
+                try {
+                    if (t.toLowerCase().endsWith("h")
+                            && !t.toLowerCase().startsWith("0x")) {
+                        operand = Integer.parseInt(
+                                t.substring(0, t.length() - 1), 16);
+                    } else {
+                        operand = Integer.decode(t);
+                    }
+                    if (operand < 0 || operand > 255) {
+                        throw new NumberFormatException("range");
+                    }
+                } catch (NumberFormatException ex) {
+                    if (errors != null) {
+                        errors.add("Line " + (i + 1)
+                                + ": operand '" + t
+                                + "' must be a number from 0 to 255");
+                    }
+                    continue;
+                }
+            }
+
+            result.add(new ParsedInstruction(
+                    opcode, operand, hasOperand, i));
+        }
+        return result;
+    }
+
+    /** Loads the edited text into the simulator (local or via Core IPC). */
+    private void applyEditedProgram() {
+        List<String> errors = new ArrayList<>();
+        List<ParsedInstruction> parsed =
+                parseProgramText(programArea.getText(), errors);
+
+        if (!errors.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    String.join("\n", errors),
+                    "Program Errors",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+
+        if (parsed.isEmpty()) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "The program is empty. Enter at least one instruction.",
+                    "Program Errors",
+                    JOptionPane.WARNING_MESSAGE
+            );
+            return;
+        }
+
+        if (isRemoteUI()) {
+            StringBuilder cmd = new StringBuilder("LOADPROG ");
+            for (int i = 0; i < parsed.size(); i++) {
+                ParsedInstruction pi = parsed.get(i);
+                if (i > 0) {
+                    cmd.append(';');
+                }
+                cmd.append(pi.opcode).append(' ').append(pi.operand);
+            }
+            sendCoreCommand(cmd.toString());
+            return;
+        }
+
+        stopRun();
+        programLines.clear();
+        initialiseModel();
+
+        for (ParsedInstruction pi : parsed) {
+            add(pi.opcode, pi.operand);
+        }
+
+        // Task 1 starts at address 0. A second task starts after the
+        // first SLEEP, if the program has one followed by more code.
+        scheduler.addTask(new Task(1, "Task 1", 0));
+        for (int i = 0; i < parsed.size() - 1; i++) {
+            if (parsed.get(i).opcode.equals("SLEEP")) {
+                scheduler.addTask(new Task(2, "Task 2", i + 1));
+                break;
+            }
+        }
+
+        isLoaded = true;
+
+        // Keep the user's text (comments, spacing); only rebuild the map.
+        instructionLines = new ArrayList<>();
+        for (ParsedInstruction pi : parsed) {
+            instructionLines.add(pi.line);
+        }
+        pcHighlightTag = null;
+        programArea.getHighlighter().removeAllHighlights();
+        programStatus.setText(
+                "Program applied: " + parsed.size() + " instructions."
+        );
+        programStatus.setForeground(new Color(0, 110, 50));
+
+        console.setText(
+                "Edited program loaded (" + parsed.size()
+                + " instructions).\nPress STEP or RUN.\n\n"
+        );
+
+        refreshView();
     }
 
 
@@ -753,63 +1068,72 @@ if (instructionPC != null) {
                         245
                 );
 
-        programList =
-                new JList<>(
-                        programLines.toArray(
-                                new String[0]
-                        )
-                );
-
-        programList.setFont(MONO);
-
-        programList.setSelectionMode(
-                ListSelectionModel.SINGLE_SELECTION
+        programArea = new JTextArea();
+        programArea.setFont(MONO);
+        programArea.setEditable(true);
+        programArea.setEnabled(true);
+        programArea.setTabSize(4);
+        programArea.setBackground(Color.WHITE);
+        programArea.setBorder(
+                BorderFactory.createEmptyBorder(8, 6, 8, 10)
         );
 
-        programList.setBackground(
-                Color.WHITE
+        // Gutter showing the instruction address of each line.
+        programGutter = new JTextArea();
+        programGutter.setFont(MONO);
+        programGutter.setEditable(false);
+        programGutter.setFocusable(false);
+        programGutter.setForeground(new Color(110, 120, 130));
+        programGutter.setBackground(new Color(236, 240, 245));
+        programGutter.setBorder(
+                BorderFactory.createEmptyBorder(8, 10, 8, 6)
         );
 
-        programList.setBorder(
-                BorderFactory.createEmptyBorder(
-                        8,
-                        10,
-                        8,
-                        10
-                )
+        programArea.getDocument().addDocumentListener(
+                new DocumentListener() {
+                    @Override
+                    public void insertUpdate(DocumentEvent e) {
+                        programTextChanged();
+                    }
+
+                    @Override
+                    public void removeUpdate(DocumentEvent e) {
+                        programTextChanged();
+                    }
+
+                    @Override
+                    public void changedUpdate(DocumentEvent e) {
+                        programTextChanged();
+                    }
+                }
         );
 
-        panel.add(
-                new JScrollPane(programList),
-                BorderLayout.CENTER
+        JScrollPane programScroll = new JScrollPane(programArea);
+        programScroll.setRowHeaderView(programGutter);
+
+        panel.add(programScroll, BorderLayout.CENTER);
+
+        JPanel south = new JPanel(new BorderLayout(6, 4));
+        south.setOpaque(false);
+
+        JButton applyButton = new JButton("APPLY PROGRAM");
+        applyButton.addActionListener(e -> applyEditedProgram());
+
+        programStatus = new JLabel(
+                "One instruction per line, e.g. MOVLW 0x0A. "
+                        + "';' starts a comment."
+        );
+        programStatus.setFont(
+                new Font(Font.MONOSPACED, Font.PLAIN, 11)
+        );
+        programStatus.setBorder(
+                BorderFactory.createEmptyBorder(5, 7, 5, 7)
         );
 
-        JLabel note =
-                new JLabel(
-                        "Address     Opcode     Operand"
-                );
+        south.add(programStatus, BorderLayout.CENTER);
+        south.add(applyButton, BorderLayout.EAST);
 
-        note.setFont(
-                new Font(
-                        Font.MONOSPACED,
-                        Font.PLAIN,
-                        11
-                )
-        );
-
-        note.setBorder(
-                BorderFactory.createEmptyBorder(
-                        5,
-                        7,
-                        5,
-                        7
-                )
-        );
-
-        panel.add(
-                note,
-                BorderLayout.SOUTH
-        );
+        panel.add(south, BorderLayout.SOUTH);
 
         return panel;
     }
@@ -1578,9 +1902,7 @@ runButton.addActionListener(e -> {
         // Reset Week 3 queue value generation
         nextQueueValue = 10;
 
-        programList.setListData(
-                new String[0]
-        );
+        showProgramListing();
 
         console.setText(
                 "Simulator reset. "
@@ -1783,8 +2105,7 @@ private void refreshView() {
         // Program selection
         int pc = cpu.getPC();
         if (pc >= 0 && pc < programLines.size()) {
-            programList.setSelectedIndex(pc);
-            programList.ensureIndexIsVisible(pc);
+            highlightProgramLine(pc);
         }
 
         stepButton.setEnabled(
@@ -1965,4 +2286,3 @@ peekButton.addActionListener(e -> {
         );
     }
 }
-

@@ -150,6 +150,12 @@ public class CoreThreads {
                     sendResult(core.loadProgram());
                     logQueue.add("PROGRAM LOADED");
                     return;
+                case "LOADPROG": {
+                    String spec = command.trim().substring("LOADPROG".length()).trim();
+                    sendResult(core.loadProgram(spec));
+                    logQueue.add("USER PROGRAM LOADED");
+                    return;
+                }
                 case "LIST":
                     sendResult(core.getProgramListing());
                     return;
