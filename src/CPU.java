@@ -14,6 +14,7 @@ public class CPU {
     private static final int C_FLAG = 0;   // Carry
 
     private boolean halted = false;
+    private String lastExecutionMessage = "";
 
     // =========================================================
     // CONSTRUCTOR
@@ -69,6 +70,11 @@ public class CPU {
 
     public boolean isHalted() {
         return halted;
+    }
+
+    /** Returns the most recent Hamming instruction result, if any. */
+    public String getLastExecutionMessage() {
+        return lastExecutionMessage;
     }
 
     /*
@@ -132,6 +138,8 @@ public class CPU {
 
         String opcode = currentInstruction.getOpcode();
         int operand = currentInstruction.getOperand();
+        int operand2 = currentInstruction.getSecondOperand();
+        lastExecutionMessage = "";
 
         switch (opcode) {
 
@@ -226,6 +234,57 @@ public class CPU {
                 break;
 
             // -------------------------------------------------
+            // WEEK 5: HAMMING (12,8) SINGLE-BIT CORRECTION
+            // -------------------------------------------------
+
+            case "HENC": {
+                int dataAddress = operand & 0xFF;
+                int codeAddress = operand2 & 0xFF;
+                int codeword = Hamming128.encode(dataMemory.read(dataAddress));
+                writeHammingWord(codeAddress, codeword);
+                lastExecutionMessage = String.format(
+                        "Hamming encoded RAM[0x%02X] into 12-bit code 0x%03X at RAM[0x%02X..0x%02X].",
+                        dataAddress, codeword, codeAddress, (codeAddress + 1) & 0xFF);
+                break;
+            }
+
+            case "FLIP": {
+                int codeAddress = operand & 0xFF;
+                int bitIndex = operand2;
+                int codeword = readHammingWord(codeAddress);
+                int damaged = Hamming128.flip(codeword, bitIndex);
+                writeHammingWord(codeAddress, damaged);
+                lastExecutionMessage = String.format(
+                        "Injected one-bit fault at Hamming codeword bit %d (RAM address 0x%02X).",
+                        bitIndex, codeAddress);
+                break;
+            }
+
+            case "HDEC": {
+                int dataAddress = operand & 0xFF;
+                int codeAddress = operand2 & 0xFF;
+                int received = readHammingWord(codeAddress);
+                int syndrome = Hamming128.syndrome(received);
+                int corrected = Hamming128.decode(received);
+                dataMemory.write(dataAddress, corrected);
+                if (syndrome >= 1 && syndrome <= 12) {
+                    int correctedBit = syndrome - 1;
+                    writeHammingWord(codeAddress,
+                            received ^ (1 << correctedBit));
+                    lastExecutionMessage = String.format(
+                            "Hamming syndrome %d: corrected codeword bit %d; recovered 0x%02X.",
+                            syndrome, correctedBit, corrected);
+                } else if (syndrome == 0) {
+                    lastExecutionMessage = String.format(
+                            "No Hamming bit error detected; recovered 0x%02X.", corrected);
+                } else {
+                    lastExecutionMessage = String.format(
+                            "Invalid Hamming syndrome %d; result is not guaranteed.", syndrome);
+                }
+                break;
+            }
+
+            // -------------------------------------------------
             // PROGRAM TERMINATION
             // -------------------------------------------------
 
@@ -241,6 +300,19 @@ public class CPU {
                         "Unknown instruction: " + opcode
                 );
         }
+    }
+
+    private int readHammingWord(int lowAddress) {
+        int low = dataMemory.read(lowAddress & 0xFF);
+        int high = dataMemory.read((lowAddress + 1) & 0xFF) & 0x0F;
+        return (low | (high << 8)) & 0x0FFF;
+    }
+
+    private void writeHammingWord(int lowAddress, int codeword) {
+        int address = lowAddress & 0xFF;
+        int word = codeword & 0x0FFF;
+        dataMemory.write(address, word & 0xFF);
+        dataMemory.write((address + 1) & 0xFF, (word >>> 8) & 0x0F);
     }
 
     // =========================================================
@@ -310,5 +382,6 @@ public class CPU {
         currentInstruction = null;
 
         halted = false;
+        lastExecutionMessage = "";
     }
 }

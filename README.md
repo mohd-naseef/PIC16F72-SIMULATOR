@@ -216,3 +216,30 @@ The stack uses a fixed-size array, so its size cannot grow dynamically.
 - Values are handled as 8-bit values.
 - The implementation is a simplified software model of the PIC16F72 stack and is intended for simulator use.
 >>>>>>> origin/main
+
+
+## Week 5 – Hamming (12,8) single-bit correction
+
+The Week 5 integration adds a Hamming (12,8) encoder/decoder to the existing
+Week 1–4 simulator without replacing its CPU, scheduler, FIFO, Logger, Core IPC,
+or Swing interface. The simulator supports three teaching instructions:
+
+- `HENC dataAddress, codeAddress` – encode one byte into a 12-bit codeword.
+- `FLIP codeAddress, bitIndex` – inject one bit fault (bit index 0–11).
+- `HDEC dataAddress, codeAddress` – correct a single-bit error and write the
+  recovered byte back to RAM.
+
+Program Memory rows can be edited by double-clicking an instruction and entering an opcode with one or two operands. The edit is applied to the local CPU model or sent through Core IPC. The existing execution console is paired with an Errors / Logger panel for Hamming status and Core errors. The integrated demonstration is in `programs/week5_hamming_demo.asm`. It stores
+the source byte at `0x20` and the 12-bit codeword at `0x40`–`0x41`.
+The Week 3 FIFO mirrors its queue slots into `0x30`–`0x37`, so the Hamming
+demonstration deliberately avoids that reserved range.
+
+This is a Hamming (12,8) SEC demonstration: it corrects a single flipped bit.
+It does not provide guaranteed double-bit error detection (SECDED).
+
+To run the focused integration check after compiling the source files:
+
+```powershell
+javac -encoding UTF-8 -d out src\*.java tests\HammingIntegrationTest.java
+java -cp out HammingIntegrationTest
+```

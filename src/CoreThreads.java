@@ -153,6 +153,20 @@ public class CoreThreads {
                 case "LIST":
                     sendResult(core.getProgramListing());
                     return;
+                case "EDIT": {
+                    if (parts.length != 4 && parts.length != 5) {
+                        throw new IllegalArgumentException(
+                                "Usage: EDIT address opcode operand [secondOperand]");
+                    }
+                    int address = Integer.decode(parts[1]);
+                    String opcode = parts[2].toUpperCase();
+                    int operand = Integer.decode(parts[3]);
+                    Integer second = parts.length == 5
+                            ? Integer.decode(parts[4]) : null;
+                    sendResult(core.editInstruction(address, opcode, operand, second));
+                    logQueue.add("PROGRAM INSTRUCTION EDITED AT " + address);
+                    return;
+                }
                 case "STEP":
                     sendResult(core.stepProgram());
                     logQueue.add("CPU STEP");
