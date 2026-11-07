@@ -36,13 +36,37 @@ public class CoreProcess {
         programMemory.addInstruction(new Instruction("INCF", 20));
         programMemory.addInstruction(new Instruction("SLEEP", 0));
 
+        // Week 5 Hamming demonstration: addresses 10-15.
+        // 0x30-0x37 are mirrored by the Week 3 FIFO, so the
+        // Hamming codeword uses 0x40-0x41 to avoid that RAM region.
+        programMemory.addInstruction(new Instruction("MOVLW", 0x86));
+        programMemory.addInstruction(new Instruction("MOVWF", 0x20));
+        programMemory.addInstruction(new Instruction("HENC", 0x20, 0x40));
+        programMemory.addInstruction(new Instruction("FLIP", 0x40, 2));
+        programMemory.addInstruction(new Instruction("HDEC", 0x20, 0x40));
+        programMemory.addInstruction(new Instruction("SLEEP", 0));
+
         scheduler.addTask(new Task(1, "Task 1", 0));
         scheduler.addTask(new Task(2, "Task 2", 5));
+        scheduler.addTask(new Task(3, "Week 5 Hamming", 10));
         loaded = true;
         return "RESULT: PROGRAM_LOADED count=" + programMemory.size();
     }
 
     // Format: RESULT: PROGRAM_LIST 0|MOVLW|10;1|MOVWF|20;...
+    public synchronized String editInstruction(int address, String opcode,
+                                                int operand, Integer secondOperand) {
+        if (!loaded) return "RESULT: ERROR_PROGRAM_NOT_LOADED";
+        if (address < 0 || address >= programMemory.size()) {
+            return "RESULT: ERROR_INVALID_ADDRESS " + address;
+        }
+        Instruction updated = secondOperand == null
+                ? new Instruction(opcode, operand)
+                : new Instruction(opcode, operand, secondOperand);
+        programMemory.setInstruction(address, updated);
+        return "RESULT: INSTRUCTION_UPDATED address=" + address;
+    }
+
     public synchronized String getProgramListing() {
         if (!loaded) return "RESULT: ERROR_PROGRAM_NOT_LOADED";
         StringBuilder out = new StringBuilder("RESULT: PROGRAM_LIST ");
@@ -52,6 +76,9 @@ public class CoreProcess {
             out.append(i).append('|')
                .append(instruction.getOpcode()).append('|')
                .append(instruction.getOperand());
+            if (instruction.hasSecondOperand()) {
+                out.append(',').append(instruction.getSecondOperand());
+            }
         }
         return out.toString();
     }
@@ -72,6 +99,10 @@ public synchronized String stepProgram() {
     cpu.update_Status();
     if (logger != null) {
         logger.exec("Executed step: " + (record != null ? record.toString() : "No record"));
+        if (cpu.getLastExecutionMessage() != null
+                && !cpu.getLastExecutionMessage().isEmpty()) {
+            logger.info(cpu.getLastExecutionMessage());
+        }
     }
 
     if (record == null) {
@@ -83,7 +114,10 @@ public synchronized String stepProgram() {
             + " executedTask=" + record.getTaskName()
             + " instruction=" + record.getInstruction()
             + " executedW=" + record.getW()
-            + " nextPC=" + record.getNextPC();
+            + " nextPC=" + record.getNextPC()
+            + (cpu.getLastExecutionMessage().isEmpty()
+                    ? ""
+                    : " hamming=" + cpu.getLastExecutionMessage().trim().replaceAll("\\s+", "_"));
 }
 
    
@@ -109,6 +143,11 @@ public synchronized String runProgram() {
         }
 
         cpu.update_Status();
+
+        if (logger != null && cpu.getLastExecutionMessage() != null
+                && !cpu.getLastExecutionMessage().isEmpty()) {
+            logger.info(cpu.getLastExecutionMessage());
+        }
 
         if (trace.length() > 0) {
             trace.append(";");
@@ -154,6 +193,9 @@ public synchronized String runProgram() {
                 + " w=" + cpu.getW()
                 + " status=" + cpu.getSTATUS()
                 + " ram20=" + dataMemory.read(20)
+                + " ram32=" + dataMemory.read(0x20)
+                + " hamcode=" + (dataMemory.read(0x40)
+                        | ((dataMemory.read(0x41) & 0x0F) << 8))
                 + " sp=" + dataMemory.getSP()
                 + " halted=" + (cpu.isHalted() ? 1 : 0)
                 + " task=" + taskName;

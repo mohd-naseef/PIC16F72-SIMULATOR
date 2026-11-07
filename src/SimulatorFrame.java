@@ -55,11 +55,14 @@ public class SimulatorFrame extends JFrame {
     private JList<String> programList;
 
     private JTextArea console;
+    private JTextArea loggerArea;
 
     private JLabel wValue;
     private JLabel pcValue;
     private JLabel statusValue;
     private JLabel memoryValue;
+    private JLabel hammingDataValue;
+    private JLabel hammingCodeValue;
     private JLabel timerValue;
     private JLabel portValue;
     private JLabel stateValue;
@@ -221,6 +224,13 @@ if (command.trim().equalsIgnoreCase("PEEK")
                 + " instructions loaded.");
         return;
     }
+
+        if (command.trim().toUpperCase().startsWith("EDIT ")
+                && response != null
+                && response.startsWith("RESULT: INSTRUCTION_UPDATED")) {
+            log("Program instruction updated.");
+            return;
+        }
 
         // RESET: Reset CPU and memory.
         if (command.equalsIgnoreCase("RESET")
@@ -409,6 +419,9 @@ private void showRemoteResponse(String response) {
     if (!response.startsWith("RESULT: ")) {
         return;
     }
+    if (response.startsWith("RESULT: ERROR")) {
+        logLogger(response);
+    }
 
     // Update fields that do not contain spaces.
     for (String field : response.split("\\s+")) {
@@ -429,8 +442,19 @@ private void showRemoteResponse(String response) {
                         "0x%02X (%d)", ram, ram
                 ));
 
+            } else if (field.startsWith("ram32=")) {
+                int value = Integer.parseInt(field.substring(6));
+                hammingDataValue.setText(String.format("0x%02X (%d)", value, value));
+
+            } else if (field.startsWith("hamcode=")) {
+                int value = Integer.parseInt(field.substring(8));
+                hammingCodeValue.setText(String.format("0x%03X", value));
+
             } else if (field.startsWith("sp=")) {
                 spValue.setText(field.substring(3));
+
+            } else if (field.startsWith("hamming=")) {
+                logLogger("[HAMMING] " + field.substring("hamming=".length()).replace('_', ' '));
 
             } else if (field.startsWith("status=")) {
                 int status = Integer.parseInt(field.substring(7));
@@ -574,6 +598,16 @@ if (instructionPC != null) {
                 new Task(2, "Task 2", 5)
         );
 
+        // Week 5 Hamming demo. 0x30-0x37 are reserved as the
+        // Week 3 FIFO RAM mirror, so this uses 0x40-0x41.
+        add("MOVLW", 0x86);
+        add("MOVWF", 0x20);
+        add("HENC", 0x20, 0x40);
+        add("FLIP", 0x40, 2);
+        add("HDEC", 0x20, 0x40);
+        add("SLEEP", 0);
+        scheduler.addTask(new Task(3, "Week 5 Hamming", 10));
+
 
         isLoaded = true;
 
@@ -619,6 +653,70 @@ if (instructionPC != null) {
                         operandText
                 )
         );
+    }
+
+    /**
+     * Edits the selected Program Memory row. Double-click a row and enter
+     * an instruction such as MOVLW 0x25 or HENC 0x20,0x40.
+     */
+    private void editSelectedInstruction(int address) {
+        String current = isRemoteUI()
+                ? programLines.get(address).trim().replaceFirst("^\\d+\\s+", "")
+                : programMemory.getInstruction(address).toString();
+        String entered = JOptionPane.showInputDialog(
+                this,
+                "Enter opcode and operand(s):",
+                current
+        );
+        if (entered == null || entered.trim().isEmpty()) return;
+
+        try {
+            String[] pieces = entered.trim().replace(",", " ").split("\\s+");
+            if (pieces.length < 2 || pieces.length > 3) {
+                throw new IllegalArgumentException(
+                        "Use: OPCODE operand or OPCODE operand1,operand2");
+            }
+            String opcode = pieces[0].toUpperCase();
+            int operand = Integer.decode(pieces[1]);
+            Integer second = pieces.length == 3
+                    ? Integer.decode(pieces[2]) : null;
+
+            if (isRemoteUI()) {
+                String command = "EDIT " + address + " " + opcode + " " + operand
+                        + (second == null ? "" : " " + second);
+                sendCoreCommand(command);
+                sendCoreCommand("LIST");
+            } else {
+                Instruction updated = second == null
+                        ? new Instruction(opcode, operand)
+                        : new Instruction(opcode, operand, second);
+                programMemory.setInstruction(address, updated);
+                String operandText = second == null
+                        ? (opcode.equals("SLEEP") ? "" : String.format("0x%02X", operand))
+                        : String.format("0x%02X,0x%02X", operand, second);
+                programLines.set(address, String.format(
+                        "%02d    %-7s %s", address, opcode, operandText));
+                programList.setListData(programLines.toArray(new String[0]));
+                programList.setSelectedIndex(address);
+                log("Program Memory address " + address + " updated: " + updated);
+            }
+        } catch (RuntimeException ex) {
+            JOptionPane.showMessageDialog(
+                    this, ex.getMessage(), "Instruction Edit Error",
+                    JOptionPane.WARNING_MESSAGE);
+        }
+    }
+
+    /** Adds a two-operand Week 5 Hamming simulator instruction. */
+    private void add(String opcode, int operand, int secondOperand) {
+        programMemory.addInstruction(
+                new Instruction(opcode, operand, secondOperand)
+        );
+
+        programLines.add(String.format(
+                "%02d    %-7s 0x%02X,0x%02X",
+                programLines.size(), opcode, operand, secondOperand
+        ));
     }
 
 
@@ -766,6 +864,20 @@ if (instructionPC != null) {
                 ListSelectionModel.SINGLE_SELECTION
         );
 
+        programList.setToolTipText("Double-click an instruction to edit it.");
+        programList.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent event) {
+                if (event.getClickCount() == 2) {
+                    int index = programList.locationToIndex(event.getPoint());
+                    if (index >= 0) {
+                        programList.setSelectedIndex(index);
+                        editSelectedInstruction(index);
+                    }
+                }
+            }
+        });
+
         programList.setBackground(
                 Color.WHITE
         );
@@ -854,8 +966,31 @@ if (instructionPC != null) {
                 "Ready. Click LOAD to load program.\n\n"
         );
 
+        JScrollPane consoleScroll = new JScrollPane(console);
+
+        loggerArea = new JTextArea(5, 30);
+        loggerArea.setEditable(false);
+        loggerArea.setFont(MONO);
+        loggerArea.setForeground(new Color(125, 45, 35));
+        loggerArea.setBackground(Color.WHITE);
+        loggerArea.setMargin(new java.awt.Insets(6, 8, 6, 8));
+
+        JScrollPane loggerScroll = new JScrollPane(loggerArea);
+        loggerScroll.setBorder(
+                BorderFactory.createTitledBorder("ERRORS / LOGGER")
+        );
+
+        javax.swing.JSplitPane consoleAndLogger = new javax.swing.JSplitPane(
+                javax.swing.JSplitPane.VERTICAL_SPLIT,
+                consoleScroll,
+                loggerScroll
+        );
+        consoleAndLogger.setResizeWeight(0.76);
+        consoleAndLogger.setDividerLocation(430);
+        consoleAndLogger.setContinuousLayout(true);
+
         panel.add(
-                new JScrollPane(console),
+                consoleAndLogger,
                 BorderLayout.CENTER
         );
 
@@ -929,6 +1064,18 @@ if (instructionPC != null) {
                 readout(
                         values,
                         "RAM[0x14]"
+                );
+
+        hammingDataValue =
+                readout(
+                        values,
+                        "WEEK 5 DATA RAM[0x20]"
+                );
+
+        hammingCodeValue =
+                readout(
+                        values,
+                        "HAMMING CODE RAM[0x40-0x41]"
                 );
 
 
@@ -1456,6 +1603,12 @@ runButton.addActionListener(e -> {
 
         scheduler.step(cpu);
 
+        if (cpu.getLastExecutionMessage() != null
+                && !cpu.getLastExecutionMessage().isEmpty()) {
+            log("[WEEK 5] " + cpu.getLastExecutionMessage());
+            logLogger("[HAMMING] " + cpu.getLastExecutionMessage());
+        }
+
         timer0.tick();
 
 
@@ -1750,6 +1903,12 @@ private void refreshView() {
                 )
         );
 
+        hammingDataValue.setText(String.format(
+                "0x%02X (%d)", dataMemory.read(0x20), dataMemory.read(0x20)));
+        int hammingWord = dataMemory.read(0x40)
+                | ((dataMemory.read(0x41) & 0x0F) << 8);
+        hammingCodeValue.setText(String.format("0x%03X", hammingWord));
+
         // ====
         // WEEK 3 FIFO QUEUE DISPLAY
         // ====
@@ -1825,6 +1984,12 @@ private void refreshView() {
     // =
     // CONSOLE LOG
     // =
+
+    private void logLogger(String message) {
+        if (loggerArea == null) return;
+        loggerArea.append(message + "\\n");
+        loggerArea.setCaretPosition(loggerArea.getDocument().getLength());
+    }
 
     private void log(
             String message
